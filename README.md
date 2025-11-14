@@ -1,182 +1,166 @@
-MER2LaTeX — Deep Learning Project
-Problem Statement
+# Document Heading
 
-Math Expression Recognition (MER) là bài toán chuyển đổi ảnh công thức toán học → chuỗi LaTeX.
-Đầu vào có thể là ảnh chụp, ảnh scan, công thức in hoặc viết tay.
-Mục tiêu là tạo ra một pipeline ổn định để:
+📘 MER2LaTeX — Deep Learning Project
 
-Nhận dạng công thức từ ảnh
+Math Expression Recognition: Image → LaTeX → (Optional) SymPy
 
-Sinh LaTeX chính xác
+✨ Overview
 
-(Tùy chọn) Gửi LaTeX vào SymPy để tính toán tự động
+Math Expression Recognition (MER) là bài toán chuyển ảnh công thức toán học thành chuỗi LaTeX.
 
-Trong project này, chúng tôi tập trung vào so sánh nhiều kiến trúc Deep Learning để tìm ra mô hình phù hợp nhất cho MER.
+Đầu vào có thể là:
+• Ảnh chụp bảng/giấy
+• Ảnh scan
+• Công thức in
+• Công thức viết tay
 
-Solution Overview
+Mục tiêu của dự án:
+• Trích xuất công thức toán học từ ảnh
+• Sinh ra LaTeX chính xác
+• (Tuỳ chọn) gửi LaTeX vào SymPy để tính toán
+• Xây dựng và so sánh nhiều mô hình Deep Learning
 
-Pipeline MER tổng quát:
+🎯 Project Goals
 
-Image → Encoder (CNN / ViT) → Decoder (LSTM / Transformer) → LaTeX sequence
+• Xây dựng pipeline MER hoàn chỉnh
+• Triển khai và so sánh 4 mô hình Deep Learning
+• Preprocessing + augmentation
+• Đánh giá bằng BLEU, Edit Distance, Exact Match
+• Demo web MER → LaTeX bằng Gradio
+• Môi trường huấn luyện đầy đủ bằng Docker
+• Training reproducible
+• Báo cáo + slide hoàn chỉnh
 
+🧠 MER Pipeline
+Image → Encoder (CNN / ViT) → Decoder (LSTM / Transformer) → LaTeX Tokens
 
-Các mô hình được triển khai & so sánh:
+🏗️ Implemented Models
 
-CNN + BiLSTM + CTC (baseline OCR)
+1. CNN + BiLSTM + CTC (baseline OCR)
 
-ResNet / EfficientNet + Attention Decoder
+• Kiến trúc OCR truyền thống
+• Dùng làm baseline để so sánh
 
-Vision Transformer (ViT) + Transformer Decoder
+2. ResNet / EfficientNet + Attention Decoder
 
-DONUT-style (OCR-free Vision Transformer)
+• Encoder cực mạnh
+• Decoder sinh LaTeX bằng attention autoregressive
 
-Ngoài ra, nhóm xây dựng đầy đủ:
+3. ViT Encoder + Transformer Decoder
 
-Preprocessing & augmentation ảnh
+• Khai thác sức mạnh Vision Transformer
+• Phù hợp với công thức phức tạp, nhiều ký hiệu
 
-Tokenizer (char/BPE/WordPiece)
+4. DONUT-style (OCR-free)
 
-Loss, scheduler, optimizer
+• Không cần CTC
+• Encoder Vision Transformer → trực tiếp sinh token
+• Gần giống mô hình của NAVER CLova
 
-Evaluation (BLEU, edit-distance, exact match…)
+🧰 Additional Components
 
-Demo MER → LaTeX bằng Gradio
+• Preprocessing & augmentation ảnh
+• Tokenizer (character / BPE / WordPiece)
+• Optimizer, scheduler, gradient clipping
+• Evaluation: BLEU, Edit-distance, Exact Match
+• Logging bằng TensorBoard
+• Gradio demo MER → LaTeX
+• Docker hoá toàn bộ môi trường
 
-Training + logging (TensorBoard)
+🐳 Docker & Development Guide
 
-Docker hóa toàn bộ môi trường để đảm bảo reproducibility
-
-Làm việc từ Local Machine
-1. Clone project về máy local
+1. Clone project
 git clone https://github.com/<your-username>/mer2latex-deeplearning.git
 cd mer2latex-deeplearning
 
-2. Chạy Docker
-Build & Start
+2. Build & Run Docker
 docker-compose build
 docker-compose up -d
 
-Attach VSCode vào container
+3. Attach VSCode Dev Container
 
-Mở VSCode
+Trong VSCode:
+• Nhấn Ctrl + Shift + P
+• Chọn: Dev Containers: Attach to Running Container
+• Chọn: mer2latex-container
 
-Nhấn Ctrl + Shift + P
+→ Chỉnh code trực tiếp trong Docker.
 
-Gõ: Dev Containers: Attach to Running Container
-
-Chọn container: mer2latex-container
-
-VSCode sẽ mở môi trường của Docker → chạy & chỉnh code trực tiếp trong container.
-
-3. Chạy Jupyter Lab trong Docker
+4. Chạy Jupyter Lab
 docker exec -it mer2latex-container bash
-
-
-Trong container:
-
 jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser
 
+Truy cập: http://localhost:8888
 
-Truy cập từ host:
-👉 http://localhost:8888
-
-4. Chạy demo Gradio MER → LaTeX
+5. Chạy Gradio demo
 docker exec -it mer2latex-container bash
 python app/gradio_app.py
 
-
-Sau đó mở:
-👉 http://localhost:7860
-
-5. Chỉnh sửa code trên máy local
-
-Sử dụng VSCode Dev Container để chỉnh code trực tiếp trong môi trường Docker.
-Không cần copy file thủ công theo bất kỳ hướng nào.
+Truy cập demo: http://localhost:7860
 
 6. Push code lên GitHub
 git add .
 git commit -m "your message"
 
-# Tạo nhánh mới
+-> Tạo nhánh
+
 git checkout -b "ten_nhanh"
 git push origin "ten_nhanh"
 
-# Hoặc push lên nhánh main
+-> Hoặc nhánh main
 git push origin main
 
-Project Structure
+📁 Project Structure
 mer2latex-deeplearning/
 │
-├─ src/
-│   ├─ models/                # CNN-LSTM, Transformer, ViT, Donut
-│   ├─ datasets/
-│   ├─ engine/                # train loop, eval loop
-│   ├─ utils/                 # tokenizer, augmentation, preprocess
-│   └─ train.py               # main training script
+├── src/
+│   ├── models/           # CNN-LSTM, Transformer, ViT, Donut
+│   ├── datasets/
+│   ├── engine/           # train loop, eval loop
+│   ├── utils/            # tokenizer, augmentation, preprocess
+│   └── train.py          # main training script
 │
-├─ app/
-│   └─ gradio_app.py          # Web demo: MER → LaTeX
+├── app/
+│   └── gradio_app.py     # MER → LaTeX demo
 │
-├─ notebooks/                 # EDA + visualization
-├─ data/                      # mounted volume (not pushed to Git)
-├─ models/                    # checkpoints
-├─ logs/                      # tensorboard logs
+├── notebooks/            # EDA + visualization
+├── data/                 # ignored by Git
+├── models/               # checkpoints
+├── logs/                 # TensorBoard logs
 │
-├─ requirements.txt
-├─ Dockerfile
-├─ docker-compose.yml
-├─ .gitignore
-├─ .dockerignore
-└─ README.md
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── .gitignore
+├── .dockerignore
+└── README.md
 
-Tech Stack
+🧪 Tech Stack
 
-PyTorch
+• PyTorch
+• CNN / LSTM / Transformer / ViT
+• OpenCV + PIL
+• BPE / WordPiece tokenizer
+• Gradio
+• TensorBoard
+• Docker + VSCode Dev Container
 
-CNN / BiLSTM / ResNet / ViT / DONUT
+📦 Deliverables
 
-Transformer Decoder & Attention Mechanisms
+• Pipeline MER hoàn chỉnh
+• 4 mô hình Deep Learning để so sánh
+• Demo MER → LaTeX
+• Training reproducible với Docker
+• Notebook EDA
+• Báo cáo + slide
+• Tích hợp LaTeX → SymPy
 
-OpenCV + PIL để xử lý ảnh
+🔧 Notes
 
-Tokenizer (char/BPE/WordPiece)
-
-TensorBoard cho logging
-
-Gradio cho demo
-
-Docker + VSCode Dev Container để đồng nhất môi trường
-
-Deliverables
-
-✔️ Pipeline MER hoàn chỉnh
-
-✔️ So sánh ~4 mô hình Deep Learning khác nhau
-
-✔️ Demo web MER → LaTeX bằng Gradio
-
-✔️ Training reproducible với Docker
-
-✔️ Tài liệu báo cáo + slide
-
-✔️ Tích hợp LaTeX → SymPy để evaluate công thức
-
-Notes
-
-Thay đổi bất kỳ file nào:
-
-Dockerfile
-
-docker-compose.yml
-
-requirements.txt
-
-→ cần build lại Docker:
+• Khi thay đổi Dockerfile, docker-compose.yml, requirements.txt → cần build lại Docker
 
 docker-compose build
 docker-compose up -d
 
-
-Dữ liệu thật (folder data/) không push lên GitHub
-
-Checkpoint mô hình (folder models/) nên lưu bằng Git LFS nếu cần
+• Không push dữ liệu thật → folder data/ đã được ignore
+• Checkpoints nặng → nên dùng Git LFS

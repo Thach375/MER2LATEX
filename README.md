@@ -72,14 +72,16 @@ Image → Encoder (CNN / ViT) → Decoder (LSTM / Transformer) → LaTeX Tokens
 1. Clone project
 ```
 git clone https://github.com/Thach375/MER2LATEX.git  
-cd mer2latex-deeplearning  
+cd MER2LATEX  
 ```
-3. Build & Run Docker
+
+2. Build & Run Docker (Mở dockẻ desktop trước, và chạy lệnh trên Terminal)
 ```
 docker-compose build  
 docker-compose up -d  
 ```
-4. Attach VSCode Dev Container  
+
+3. Attach VSCode Dev Container  
 
 Trong VSCode:  
 ```
@@ -89,6 +91,7 @@ Trong VSCode:
 
 → Chỉnh code trực tiếp trong Docker.  
 ```
+
 4. Chạy Jupyter Lab
 ```
 docker exec -it mer2latex-container bash  
@@ -96,12 +99,14 @@ jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser
 
 Truy cập: http://localhost:8888  
 ```
+
 5. Chạy Gradio demo
 ```
 docker exec -it mer2latex-container bash  
 python app/gradio_app.py  
 Truy cập demo: http://localhost:7860  
 ```
+
 6. Push code lên GitHub
 ```
 git add .  

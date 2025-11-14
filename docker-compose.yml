@@ -1,0 +1,24 @@
+services:
+  mer-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mer2latex-container
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    networks:
+      - mer-network
+    ports:
+      - "8888:8888"  # Jupyter
+      - "7860:7860"  # Gradio app
+    # Giữ container chạy để bạn exec vào giống project cũ
+    command: ["tail", "-f", "/dev/null"]
+
+networks:
+  mer-network:
+    driver: bridge

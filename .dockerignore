@@ -1,0 +1,20 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Không copy data, models thật vào image
+data/
+models/
+logs/
+outputs/
+checkpoints/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+.ipynb_checkpoints/

@@ -114,19 +114,19 @@ git push origin main
 mer2latex-deeplearning/
 │
 ├── src/
-│   ├── models/           # CNN-LSTM, Transformer, ViT, Donut
-│   ├── datasets/
-│   ├── engine/           # train loop, eval loop
-│   ├── utils/            # tokenizer, augmentation, preprocess
-│   └── train.py          # main training script
+│   ├── models/           # CNN-LSTM, Transformer, ViT, Donut
+│   ├── datasets/
+│   ├── engine/           # train loop, eval loop
+│   ├── utils/            # tokenizer, augmentation, preprocess
+│   └── train.py          # main training script
 │
 ├── app/
-│   └── gradio_app.py     # MER → LaTeX demo
+│   └── gradio_app.py     # MER → LaTeX demo
 │
-├── notebooks/            # EDA + visualization
-├── data/                 # ignored by Git
-├── models/               # checkpoints
-├── logs/                 # TensorBoard logs
+├── notebooks/            # EDA + visualization
+├── data/                 # ignored by Git
+├── models/               # checkpoints
+├── logs/                 # TensorBoard logs
 │
 ├── requirements.txt
 ├── Dockerfile

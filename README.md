@@ -75,7 +75,7 @@ git clone https://github.com/Thach375/MER2LATEX.git
 cd MER2LATEX  
 ```
 
-2. Build & Run Docker (Mở dockẻ desktop trước, và chạy lệnh trên Terminal)
+2. Build & Run Docker (Mở docker desktop trước, và chạy lệnh trên Terminal)
 ```
 docker-compose build  
 docker-compose up -d  
@@ -88,6 +88,7 @@ Trong VSCode:
 • Nhấn Ctrl + Shift + P  
 • Chọn: Dev Containers: Attach to Running Container  
 • Chọn: mer2latex-container  
+• Nó sẽ pop ra cửa số vscode mới, chọn Select Foulder, rồi chọn /app, ấn Ok
 
 → Chỉnh code trực tiếp trong Docker.  
 ```
@@ -112,15 +113,18 @@ Truy cập demo: http://localhost:7860
 git add .  
 git commit -m "your message"  
 ```
+
 -> Tạo nhánh  
 ```
 git checkout -b "ten_nhanh"
 git push origin "ten_nhanh"
 ```
+
 -> Hoặc nhánh main
 ```
 git push origin main
 ```
+
 📁 Project Structure  
 MER2LATEX/  
 │

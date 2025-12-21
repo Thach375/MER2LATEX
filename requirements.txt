@@ -1,27 +1,13 @@
-# Core DL
-torch==2.3.1
-torchvision==0.18.1
-
-# Utils
 numpy
 pandas
 tqdm
 matplotlib
 scikit-learn
-
-# Image processing
 opencv-python
 Pillow
-
-# Experiment / logging
 tensorboard
-
-# Notebook
 jupyterlab
-
-# Demo UI
 gradio
-
-# (Nếu dùng transformers / ViT / Donut-stype ...)
 transformers
 timm
+seaborn

@@ -1,20 +1,11 @@
-FROM python:3.11-slim
+FROM pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime
 
 # 1. Set working directory
 WORKDIR /app
 
-# 2. Cài system dependencies cần cho DL + xử lý ảnh
+# 2. Cài system dependencies cần cho DL
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    curl \
-    wget \
-    # lib cho OpenCV / hiển thị ảnh
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
+    git curl wget libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. Copy file requirements trước để tận dụng cache

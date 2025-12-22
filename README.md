@@ -78,7 +78,7 @@ cd MER2LATEX
 2. Build & Run Docker (Mở docker desktop trước, và chạy lệnh trên Terminal)
 ```
 docker-compose build  
-docker-compose up -d  
+docker-compose up -d
 ```
 
 3. Attach VSCode Dev Container  

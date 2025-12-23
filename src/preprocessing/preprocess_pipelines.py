@@ -48,9 +48,8 @@ def preprocess_im2latex(image_path, augment=False):
             ])
             image = transform(image=image)['image']
         
-        # Step 5: Normalize (light normalization)
-        # Keep close to original distribution
-        image = image.astype(np.float32) / 255.0
+        # Step 5: 
+        image = image.astype(np.uint8)
         
         return image
     
@@ -107,8 +106,8 @@ def preprocess_crohme(image_path, augment=False):
             ])
             image = transform(image=image)['image']
         
-        # Step 6: Per-image normalization (CRITICAL for handwriting)
-        image = per_image_normalize(image)
+        # Step 6: 
+        image = image.astype(np.uint8)
         
         return image
     

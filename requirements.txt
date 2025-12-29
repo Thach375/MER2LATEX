@@ -11,3 +11,10 @@ gradio
 transformers
 timm
 seaborn
+torch
+torchvision
+pytorch-lightning
+sympy
+latex2sympy2
+sacrebleu
+wandb

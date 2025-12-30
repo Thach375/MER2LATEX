@@ -1,0 +1,515 @@
+﻿Mathematical expressions recognition (MER) to LaTeX
+1. Mục tiêu
+Xây dựng hệ thống Deep Learning có khả năng nhận dạng biểu thức toán học từ ảnh (Math Expression Recognition - MER) thành mã LaTeX chính xác, sau đó kiểm tra tính tương đương toán học bằng SymPy.
+Quy trình tổng thể (pipeline):
+Ảnh → LaTeX → kiểm tra tương đương bằng SymPy
+* Input: 
+* Ảnh viết tay hoặc chữ đánh máy định dạng jpg, về công thức toán học, phương trình toán học, có thể là công thức chứa ẩn hoặc công thức tính toán
+* Output: 
+* dạng Latex của công thức
+* giá trị rút gọn hoặc kết quả của phép tính sử dụng SymPy
+* Kiến thức liên quan: CNN, LSTM, Attention, Transformer cơ bản, ViT / ResNet + Attention decoder, fine-tune TrOCR hoặc Donut
+
+
+
+
+2. Kiến trúc & Pipeline
+1️⃣ DATA PIPELINE
+1. Chuẩn hóa cấu trúc dataset
+Bạn phải đưa mọi dataset (IM2LaTeX, CROHME, synthetic) về cấu trúc thống nhất:
+Việc cần làm:
+* Mapping từ tên file ảnh → LaTeX tương ứng
+
+* Loại bỏ sample lỗi (ảnh hỏng, LaTeX không parse)
+
+* Chuẩn hóa LaTeX (remove BOM, standardize spacing, unify \left \right …)
+
+(cần EDA nữa)
+2. Tiền xử lý ảnh
+Các bước:
+(a) Resize + Padding (chuẩn cho CNN/Vision Transformer)
+   * Giữ aspect ratio
+
+   * Pad về kích thước cố định (ví dụ 256×512)
+
+(b) Chuẩn hóa độ sáng, nhị phân hóa (nếu là handwriting CROHME)
+      * Gaussian blur
+
+      * Adaptive threshold
+
+(c) Augmentation (cực quan trọng để tránh overfitting)
+         * Random rotation ±3°
+
+         * Elastic distortion (cho handwritten)
+
+         * Affine transform
+
+         * Random thickness
+
+________________
+
+
+3. Xây dựng Tokenizer cho LaTeX
+Subword tokenizer (BPE/WordPiece)
+            * Dựa trên tần suất các patterns toán học
+
+            * Vocab ~300–1000 token
+
+            * Dễ học cấu trúc logic của LaTeX
+
+            * Đề xuất cho mô hình Transformer / Donut ????
+
+________________
+
+
+4. Tách train/val/test
+Chiến lược:
+               * 80/10/10 hoặc theo paper IM2LaTeX
+
+               * Không để các công thức giống nhau xuất hiện giữa train và test
+
+________________
+________________
+
+
+2️⃣ MODEL PIPELINE
+5. Xây dựng mô hình baseline
+Baseline 1 — CNN + BiLSTM + Attention + CTC
+ https://media.springernature.com/lw1200/springer-static/image/art%3A10.1007%2Fs42452-025-06952-z/MediaObjects/42452_2025_6952_Fig1_HTML.png?utm_source=chatgpt.com 
+
+ https://visionplatform.ai/wp-content/uploads/2023/10/1_1_5KnLvaTkGUFoyat2jHcQ.png?utm_source=chatgpt.com 
+
+Gồm:
+                  * CNN (ResNet / VGG) → trích xuất feature map
+
+                  * BiLSTM → seq modeling
+
+                  * CTC Decoder → sinh chuỗi LaTeX
+
+Ưu điểm: đơn giản, dễ training
+Nhược điểm: kém với công thức dài và phân cấp
+________________
+
+
+6. Model nâng cao
+Model 2 — CNN Encoder + Transformer Decoder
+                     * Encoder: ResNet/EfficientNet → patch embedding
+
+                     * Positional encoding 2D
+
+                     * Decoder: Transformer autoregressive
+
+                     * Loss: Cross entropy + teacher forcing
+
+Cực mạnh cho MER (đa số paper state-of-the-art dùng kiến trúc này)
+________________
+
+
+Model 3 — OCR-free Donut-style (VisionEncoder + LM Decoder)
+ https://towardsdatascience.com/wp-content/uploads/2022/08/1sIR3l8QOkIr99hqlkRIOOw.png?utm_source=chatgpt.com 
+
+ https://i.ytimg.com/vi/aSuWvEVLGzE/hqdefault.jpg?utm_source=chatgpt.com 
+
+                        * Vision Transformer Encoder (Swin, ViT)
+
+                        * Sequence-to-sequence Decoder (LM)
+
+                        * Không cần CTC
+
+                        * Là hướng mới → accuracy cao nhưng training tốn tài nguyên
+
+________________
+________________
+
+
+3️⃣ TRAINING PIPELINE
+7. Xây dựng DataLoader
+Cần:
+                           * Collate function cho sequence padding
+
+                           * Convert image → tensor
+
+                           * Convert latex → token ids
+
+                           * Positional encoding (nếu dùng Transformer)
+
+________________
+
+
+8. Training loop
+Mỗi epoch:
+                              * Forward
+
+                              * Loss (CTC hoặc CE)
+
+                              * Backprop + clip gradient
+
+                              * Teacher forcing cho decoder
+
+                              * Evaluate mỗi N steps
+
+________________
+
+
+9. Checkpointing & Logging
+                                 * WandB / TensorBoard
+
+                                 * Lưu mô hình tốt nhất theo validation loss & exact match
+
+                                 * Log thêm BLEU, edit-distance
+
+________________
+
+
+10. Hyperparameter tuning
+                                    * LR warmup (Transformer)
+
+                                    * Label smoothing
+
+                                    * Dropout trên decoder
+
+                                    * Resize size tối ưu (h × w)
+4️⃣ EVALUATION PIPELINE
+11. Metrics
+Bạn cần report đầy đủ:
+✔ Exact Match Accuracy (quan trọng nhất)
+Công thức output so sánh chuỗi LaTeX đúng 100%.
+✔ BLEU Score
+Đo mức độ giống nhau của chuỗi.
+✔ Edit Distance
+Cho biết số phép insert/delete/substitute cần thiết.
+✔ Structural Accuracy (optional)
+So sánh dựa trên parse tree (khó).
+✔ SymPy Equivalence
+Đánh giá mức độ tương đương toán học, ví dụ:
+\frac{1}{a+b} == \frac{1}{b+a}
+
+
+Hai công thức khác nhau nhưng tương đương.
+________________
+
+
+12. Error Analysis
+                                       * Xác định lỗi ký tự: missing {}, sai chỉ số, nhầm dấu
+
+                                       * Lỗi layout: fractions, matrices, integrals
+
+                                       * Lỗi ảnh: nhiễu, mờ, bị crop
+
+Bạn cần vẽ heatmap attention để xem mô hình nhìn vào đâu.
+
+
+III. Các mô hình so sánh chính
+Mã
+	Kiến trúc
+	Đặc điểm
+	(A)
+	CNN + BiLSTM + CTC
+	Baseline OCR kinh điển cho chuỗi ký tự, nhanh và nhẹ.
+	(B)
+	ResNet Encoder + Attention Decoder (autoregressive)
+	Học mối quan hệ không gian, mô hình mạnh mẽ cho layout 2D.
+	(C)
+	ViT Encoder + Transformer Decoder (2D positional)
+	Toàn attention, dùng 2D positional encoding để hiểu cấu trúc toán học.
+	(D)
+	OCR-free (DONUT-style)
+	Vision encoder + LM decoder (BPE LaTeX) — không cần CTC, thuần seq2seq.
+	
+
+IV. Các yếu tố ablation cần kiểm thử (không biết cái này là gì)
+                                          1. Tokenizer: ký tự (char-level) vs BPE LaTeX (subword).
+
+                                          2. Positional encoding: 1D (chuỗi) vs 2D (hàng/cột trong ảnh).
+
+                                          3. Image augment: blur, noise, contrast, perspective, rotation.
+
+                                          4. Training: Teacher Forcing + Scheduled Sampling.
+
+                                          5. Loss: Label smoothing (ε=0.1–0.2) vs Focal loss (γ=2).
+
+V. Dataset & tạo dữ liệu 
+                                             * Public datasets: (chatgpt bảo nấy dữ liệu hơi ít)
+                                             * CROHME ~ 10k dữ liệu
+                                             * Handwritten Mathematical Expressions
+                                             * ảnh viết tay tự convert label MathML -> Latex để dùng
+                                             * im2latex-100k ~ 100k dữ liệu
+                                             * IM2LATEX-100K
+                                             * ảnh in + LaTeX chuẩn.
+
+                                                * Synthetic dataset (tự sinh): (này để tự sinh thêm ảnh để train)
+                                                * Render LaTeX với các loại font, kích thước, nhiễu khác nhau.
+                                                * Sinh tự động các công thức đa dạng: đạo hàm, tích phân, ma trận, giới hạn,…
+                                                * Augment bằng nhiễu Gaussian, blur, JPEG artifacts, background texture.
+                                                * Mục tiêu: tạo biểu thức OOD (out-of-distribution) để kiểm tra khả năng tổng quát hóa.
+
+
+
+VI. Đánh giá mô hình 
+Tiêu chí
+	Mô tả
+	Exact LaTeX Match
+	% mẫu trùng 100% chuỗi LaTeX.
+	Edit Distance (token)
+	Levenshtein distance giữa chuỗi dự đoán và ground-truth.
+	AST/MathTree Match
+	So khớp cấu trúc cú pháp sau khi parse LaTeX.
+	SymPy Equivalence
+	So giá trị giữa hai biểu thức tại 100 điểm ngẫu nhiên.
+	Robustness
+	Test khi thêm nhiễu/blur/contrast.
+	OOD Generalization
+	Biểu thức dài, cấu trúc lạ hoặc ký hiệu hiếm.
+	Speed / VRAM
+	Latency và mức tiêu thụ bộ nhớ (8GB / 12GB).
+	VII. Phân công công việc sắp tới
+                                                   * Đạt
+
+
+Nhiệm vụ Chi tiết
+	Input (Đầu vào)
+	Output expected 
+	Xây dựng Data Pipeline
+- Tải dataset IM2LaTeX & CROHME, đọc hiểu
+
+
+- Resize ảnh về kích thước cố định ( 128x512).
+
+
+- Lọc bỏ các ảnh lỗi hoặc công thức quá dài (>150 tokens).
+	Raw Dataset (Ảnh + File công thức).
+	Folder processed_data/: Chứa ảnh đã resize và file metadata.csv (cột: image_path, formula).
+	Phát triển Tokenizer (Char-level)
+
+
+- Tạo file từ điển ánh xạ từng ký tự sang số ID.
+
+
+- Cần thêm 4 token đặc biệt: <PAD>, <SOS>, <EOS>, <UNK>.
+	File metadata.csv (cột formula).
+	File vocab.json: Từ điển ánh xạ.
+
+
+Class Tokenizer: Code python để convert text <-> ID.
+	Tạo Dữ liệu Synthetic (Giả lập)
+- Dùng thư viện pylatex hoặc matplotlib để render công thức ra ảnh.
+- Tạo tập OOD (Out-of-Distribution): Các công thức rất dài hoặc ký hiệu lạ.
+	Code sinh công thức ngẫu nhiên.
+	Folder synthetic_data/: 10k-20k ảnh mới để train thêm.
+	
+
+                                                   * Thạch (CNN + BiLSTM + CTC)
+
+
+Nhiệm vụ Chi tiết
+	Input (Đầu vào)
+	Output Expected
+	Setup Training Loop
+
+
+- Viết khung code training chung cho nhóm (Load data -> Forward -> Loss -> Backward -> Save).
+
+
+- Setup thư viện Albumentations để augment ảnh.
+	Python, PyTorch/Tensorflow.
+	File train_template.py: Code mẫu để M3, M4 kế thừa.
+	Train Model A (CRNN)
+
+
+- Kiến trúc: CNN (trích xuất đặc trưng) -> BiLSTM (xử lý chuỗi) -> CTC Loss.
+
+
+- Ưu điểm: Không cần Attention, train rất nhanh.
+	processed_data/ và vocab.json (từ M1).
+	File model_a_best.pth: File trọng số tốt nhất.
+
+
+Log Training: Biểu đồ Loss giảm dần.
+	Robustness Testing (Kiểm thử độ bền)
+
+
+- Test Model A trên tập dữ liệu bị làm mờ, nhiễu hạt, xoay nghiêng.
+
+
+- Tinh chỉnh tham số Augmentation để model học tốt hơn.
+	Model A và Script Augmentation.
+	Báo cáo Robustness: Bảng so sánh độ chính xác trên ảnh sạch vs ảnh nhiễu.
+	Tối ưu hóa Loss
+
+
+- Thử thay CTC Loss bằng Focal Loss (để tập trung vào các case khó).
+	Code Model A.
+	Kết quả Ablation Study: So sánh hiệu quả giữa các hàm Loss.
+	
+
+                                                   * Thái (ResNet Encoder + Attention Decoder (autoregressive))
+
+
+Nhiệm vụ Chi tiết
+	Input (Đầu vào)
+	Output (Sản phẩm bàn giao)
+	Xây dựng Model B (Seq2Seq)
+
+
+- Encoder: ResNet (lấy pretrained từ ImageNet).
+
+
+- Decoder: LSTM với cơ chế Attention (Bahdanau Attention).
+	train_template.py (từ M2) và Data (từ M1).
+	File model_b.py: Code kiến trúc mô hình.
+
+
+File model_b_best.pth.
+	Nghiên cứu Positional Encoding
+
+
+- Thử nghiệm việc đưa thông tin tọa độ (x,y) vào feature map trước khi đưa vào Decoder.
+
+
+- So sánh bản không có PE và có PE 2D.
+	Code Model B.
+	Báo cáo Ablation Study: Biểu đồ so sánh độ chính xác khi dùng 2D Positional Encoding.
+	Phân tích lỗi (Error Analysis)
+
+
+- Xuất ra các ảnh mà Model B dự đoán sai.
+
+
+- Phân tích xem sai do cấu trúc (Attention nhìn nhầm chỗ) hay do ký tự giống nhau.
+	Kết quả chạy thử trên tập Test.
+	Mục "Error Analysis" trong báo cáo cuối kỳ.
+	
+
+                                                   * Quang(ViT Encoder + Transformer Decoder (2D positional))
+
+
+Nhiệm vụ Chi tiết
+	Input (Đầu vào)
+	Output Expected
+	Xây dựng Tokenizer BPE
+
+
+- Khác với M1 (dùng Char), bạn dùng thư viện tokenizers của HuggingFace để học các subword (vd: \frac là 1 token).
+
+
+- Train Model C (ViT + Transformer Decoder).
+	Dataset Text (Formula).
+	File tokenizer_bpe.json.
+
+
+File model_c_best.pth.
+	Fine-tune Pretrained Model (Optional)
+
+
+- Nếu tự train ViT khó quá, hãy tải TrOCR hoặc Donut của Microsoft/Naver về và fine-tune lại trên data của nhóm.
+	Pretrained Weights (HuggingFace).
+	Model C/D (Fine-tuned): Kết quả thường cao hơn tự train từ đầu.
+	Kiểm tra OOD (Out-of-Distribution)
+
+
+- Dùng Model C chạy trên tập dữ liệu "lạ" mà M1 đã tạo ra.
+
+
+- Transformer thường giỏi việc suy luận cấu trúc lạ hơn CNN.
+	Tập synthetic_data/ (từ M1).
+	Báo cáo OOD: So sánh khả năng tổng quát hóa của Model C vs Model A, B.
+	
+
+                                                   * Anh Nam
+
+
+Nhiệm vụ Chi tiết
+	Input (Đầu vào)
+	Output Expected
+	Xây dựng App Demo (Gradio)
+
+
+- Viết file app.py: Có nút upload ảnh -> Gọi Model tốt nhất -> Gọi SymPy check (của M1) -> Hiển thị kết quả.
+
+
+- Đóng gói Docker.
+	Model tốt nhất, Script SymPy.
+	Link Demo chạy trên Web.
+
+
+Dockerfile: File để chạy dự án trên máy bất kỳ.
+	SymPy Validator Module
+
+
+- Viết hàm Python nhận chuỗi LaTeX, chuẩn hóa (vd: \frac -> /) rồi tính giá trị.
+
+
+- So sánh kết quả của Model và Ground Truth.
+	Output string từ Model 2,3,4.
+	Script evaluate_sympy.py: Hàm trả về True/False (Tương đương toán học).
+
+
+	
+
+	
+
+	
+
+	
+
+VIII. Tài nguyên & tham khảo
+🔹 Dự án mã nguồn mở
+                                                   * LaTeX-OCR (pix2tex): github.com/lukas-blecher/LaTeX-OCR
+
+                                                   * Math2LaTeX: github.com/wz-ml/Math2LaTeX
+
+                                                   * Texify: github.com/VikParuchuri/texify
+
+                                                   * Pix2Text: github.com/breezedeus/Pix2Text
+
+🔹 Paper & nghiên cứu
+                                                      * ConvMath (2020): arxiv.org/abs/2012.12619
+
+                                                      * HMER via Attention Aggregation (2021): arxiv.org/abs/2112.03603
+
+                                                      * PP-FormulaNet (2025): arxiv.org/abs/2503.18382
+
+🔹 Video & tài nguyên học nhanh
+                                                         * 🎥 pix2tex – Image to LaTeX Transformer (YouTube)
+
+                                                         * 🎥 Math Formula Recognition using Deep Learning – FreeCodeCamp/Stanford AI Talks
+
+                                                         * 🎥 Donut: OCR-free Document Understanding Transformer – KakaoBrain Research Talk
+
+                                                         * 📘 “Visual Transformer Explained” – VISO.AI blog
+
+                                                         * 📘 “Math Expression Recognition: Overview and Datasets” – Papers With Code summary
+
+
+
+
+
+IX. Mốc thời gian triển khai (6 tuần)
+Tuần
+	Nội dung chính
+	1
+	Thiết lập môi trường, download dataset, viết tokenizer, thử render LaTeX synthetic
+	2
+	Huấn luyện mô hình CTC baseline + thêm augment pipeline
+	3
+	Xây dựng và train mô hình ResNet + Attention
+	4
+	Train ViT/Donut + triển khai module SymPy equivalence
+	5
+	Ablation study: tokenizer, positional encoding, loss function
+	6
+	Gradio demo, Docker packaging, viết báo cáo và video demo
+	
+
+
+
+X. Các điểm cần đặc biệt lưu ý
+                                                            * Parser LaTeX → SymPy dễ lỗi cú pháp, cần bước chuẩn hóa (normalize) trước.
+
+                                                            * Với ViT hoặc CNN grid encoder, phải giữ 2D layout để mô hình học không gian.
+
+                                                            * Không chỉ đánh giá Exact Match – SymPy equivalence mới phản ánh hiểu biết toán học.
+
+                                                            * Quản lý VRAM (FP16, batch nhỏ, gradient checkpointing).
+
+                                                            * Đảm bảo reproducibility: cùng seed, config, và log đầy đủ (W&B, MLflow, CSV).

@@ -14,7 +14,7 @@ echo "=================================================="
 echo ""
 echo "📋 STEP 1: Download Dataset"
 echo "--------------------------------------------------"
-python -m src.data.download_dataset
+python -m src.utils.download_dataset
 
 # Step 2: EDA
 echo ""

@@ -18,3 +18,4 @@ sympy
 latex2sympy2
 sacrebleu
 wandb
+kagglehub

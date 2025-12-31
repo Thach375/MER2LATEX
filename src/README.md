@@ -44,10 +44,7 @@ python -m src.data_formatting.crohme_formatter
 
 ### 2. Run EDA
 ```bash
-python -m src.analysis.image
-python -m src.analysis.label
-python -m src.analysis.compare
-python -m src.analysis.structural
+python -m src.utils.analysis
 ```
 
 ### 3. Preprocess Images

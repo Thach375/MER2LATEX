@@ -125,6 +125,73 @@ def batch_preprocess_and_save(dataset_type='im2latex'):
     return all_dfs
 
 
-print("✓ Batch processing function ready")
-print("\nNote: Saving all preprocessed images will require significant disk space.")
-print("Consider processing on-the-fly during training instead.")
+def main():
+    """
+    Main function to run batch preprocessing for all datasets.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='Batch preprocess images for IM2LATEX and/or CROHME datasets'
+    )
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        choices=['im2latex', 'crohme', 'both'],
+        default='both',
+        help='Dataset to process (default: both)'
+    )
+
+    args = parser.parse_args()
+
+    print("\n" + "="*70)
+    print("BATCH PREPROCESSING PIPELINE")
+    print("="*70)
+    print("\nNote: Saving all preprocessed images will require significant disk space.")
+    print("Consider processing on-the-fly during training if storage is limited.\n")
+
+    datasets_to_process = []
+    if args.dataset == 'both':
+        datasets_to_process = ['im2latex', 'crohme']
+    else:
+        datasets_to_process = [args.dataset]
+
+    results = {}
+    for dataset_type in datasets_to_process:
+        print(f"\n{'#'*70}")
+        print(f"# Starting {dataset_type.upper()} dataset preprocessing")
+        print(f"{'#'*70}\n")
+
+        try:
+            result_dfs = batch_preprocess_and_save(dataset_type=dataset_type)
+            results[dataset_type] = result_dfs
+
+            # Summary statistics
+            print(f"\n{'='*70}")
+            print(f"{dataset_type.upper()} PREPROCESSING COMPLETE")
+            print(f"{'='*70}")
+            for split_name, df in result_dfs.items():
+                print(f"  {split_name:10s}: {len(df):6d} images")
+            print()
+
+        except Exception as e:
+            print(f"\nError processing {dataset_type}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            continue
+
+    # Final summary
+    print("\n" + "="*70)
+    print("BATCH PREPROCESSING PIPELINE COMPLETE")
+    print("="*70)
+    if results:
+        for dataset_type, result_dfs in results.items():
+            total_images = sum(len(df) for df in result_dfs.values())
+            print(f"✓ {dataset_type.upper()}: {total_images} total images preprocessed")
+    else:
+        print("No datasets were successfully processed")
+    print()
+
+
+if __name__ == "__main__":
+    main()

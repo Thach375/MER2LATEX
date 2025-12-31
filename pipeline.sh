@@ -14,18 +14,22 @@ echo "=================================================="
 echo ""
 echo "📋 STEP 1: Download Dataset"
 echo "--------------------------------------------------"
-python 
+python -m src.data.download_dataset
 
-
-# Step 2: Preprocessing
+# Step 2: EDA
 echo ""
-echo "🔧 STEP 2: Preprocess Images"
+echo "🔍 STEP 2: Exploratory Data Analysis"
 echo "--------------------------------------------------"
-python -m src.preprocessing.transforms
+python -m src.utils.analysis 
+
+# Step 3: Preprocessing
+echo ""
+echo "🔧 STEP 3: Preprocess Images"
+echo "--------------------------------------------------"
 python -m src.preprocessing.preprocess_pipelines
 python -m src.preprocessing.batch_process
 
-# Step 3: ...
+# Step 4: ...
 
 echo ""
 echo "=================================================="

@@ -1,68 +1,63 @@
-# 🎯 CODE REORGANIZATION - HOÀN TẤT
+# CODE REORGANIZATION - HOÀN TẤT
 
-## ✅ COMPLETED
+## COMPLETED
 
 ### 1. Project Structure
 ```
 src/
- analysis/              ✅ DONE
-   ├── __init__.py       ✅ Exports all functions
-   ├── compare.py        ✅ Compare datasets
-   ├── image.py          ✅ Image analysis
-   ├── label.py          ✅ Label analysis
-   └── structural.py     ✅ Structural analysis
+ analysis/                  # DONE
+   ├── __init__.py          # Exports all functions
+   ├── compare.py           # Compare datasets
+   ├── image.py             # Image analysis
+   ├── label.py             # Label analysis
+   └── structural.py        # Structural analysis
 
- preprocessing/         ✅ DONE
-   ├── __init__.py       ✅ Exports all functions
-   ├── batch_process.py  ✅ Batch processing & save .npy
-   ├── preprocess_pipelines.py  ✅ Full pipelines (IM2LATEX vs CROHME)
-   ├── transforms.py     ✅ Basic transforms (pad, grayscale, normalize)
-   └── visualize.py      ✅ Visualize preprocessed data
+ preprocessing/             # DONE
+   ├── __init__.py          # Exports all functions
+   ├── batch_process.py     # Batch processing & save .npy
+   ├── preprocess_pipelines.py  # Full pipelines (IM2LATEX vs CROHME)
+   ├── transforms.py        # Basic transforms (pad, grayscale, normalize)
+   └── visualize.py         # Visualize preprocessed data
 
- data_formatting/       ✅ DONE
-   ├── __init__.py       ✅ Exports all functions
-   └── crohme_formatter.py ✅ InkML → PNG conversion
+ data_formatting/           # DONE
+   ├── __init__.py          # Exports all functions
+   └── crohme_formatter.py  # InkML → PNG conversion
 
- utils/                 ✅ DONE
-    ├── __init__.py       ✅
-    └── constants.py      ✅ All paths & constants (CHROME not CROHME)
+ utils/                     # DONE
+    ├── __init__.py       
+    └── constants.py        # All paths & constants (CHROME not CROHME)
 ```
 
-### 2. Runnable Scripts ✅
+### 2. Runnable Scripts
 All Python modules có `if __name__ == "__main__"` blocks:
-- ✅ `src/analysis/image.py` - Extract dimensions, analyze pixels
-- ✅ `src/analysis/label.py` - Tokenize, nesting depth, formula stats
-- ✅ `src/analysis/compare.py` - Compare datasets before/after preprocessing
-- ✅ `src/analysis/structural.py` - Analyze formula structural complexity
-- ✅ `src/preprocessing/transforms.py` - Test individual transforms
-- ✅ `src/preprocessing/preprocess_pipelines.py` - Test IM2LATEX/CROHME pipelines
-- ✅ `src/preprocessing/batch_process.py` - Process entire datasets
-- ✅ `src/preprocessing/visualize.py` - Visualize preprocessed data
-- ✅ `src/data_formatting/crohme_formatter.py` - Format CROHME from InkML
+- `src/utils/analysis.py` - Consolidated analysis functions (image, label, structural, compare)
+- `src/preprocessing/preprocess_pipelines.py` - Transform functions
+- `src/preprocessing/batch_process.py` - Batch processing
+- `src/preprocessing/transforms.py` - Test individual transforms
+- `src/preprocessing/preprocess_pipelines.py` - Test IM2LATEX/CROHME pipelines
+- `src/preprocessing/batch_process.py` - Process entire datasets
+- `src/preprocessing/visualize.py` - Visualize preprocessed data
+- `src/data_formatting/crohme_formatter.py` - Format CROHME from InkML
 
-### 3. Pipeline Script ✅
-- ✅ `pipeline.sh` - Orchestrates full workflow
+### 3. Pipeline Script
+- `pipeline.sh` - Orchestrates full workflow
   - Step 1: Format CROHME (InkML → images)
-  - Step 2: Image analysis
-  - Step 3: Label analysis
-  - Step 4: Dataset comparison
-  - Step 5: Structural analysis
-  - Step 6: Batch preprocessing (save .npy files)
+  - Step 2: Image, Label, Structural analysi, Dataset comparison
+  - Step 3: Preprocessing dataset
 
-### 4. Notebooks ✅
-- ✅ `notebooks/1_Format_CROHME.ipynb` - CROHME formatting workflow
-- ✅ `notebooks/2_EDA.ipynb` - Exploratory data analysis with visualizations
-- ✅ `notebooks/3_Preprocessing.ipynb` - Preprocessing demonstrations
-- ✅ `notebooks/3.1_Preprocessed_data_format.ipynb` - Data format validation
+### 4. Notebooks
+- `notebooks/1_Format_CROHME.ipynb` - CROHME formatting workflow
+- `notebooks/2_EDA.ipynb` - Exploratory data analysis with visualizations
+- `notebooks/3_Preprocessing.ipynb` - Preprocessing demonstrations
 
-### 5. Path Corrections ✅
-- ✅ Fixed CHROME folder name (not CROHME) in all files
-- ✅ Updated constants.py: `CROHME_ROOT = DATA_ROOT / "CHROME"`
-- ✅ Updated documentation to reflect correct paths
+### 5. Path Corrections
+- Fixed CHROME folder name (not CROHME) in all files
+- Updated constants.py: `CROHME_ROOT = DATA_ROOT / "CHROME"`
+- Updated documentation to reflect correct paths
 
 ---
 
-## 🚀 How to Use
+## How to Use
 
 ### Run Full Pipeline
 ```bash
@@ -93,18 +88,17 @@ python -m src.preprocessing.batch_process
 ### Use in Notebooks
 ```python
 # Import functions
-from src.analysis.image import analyze_image_dimensions
-from src.analysis.label import analyze_labels
+from src.utils.analysis import extract_image_dimensions, tokenize_formula, calculate_nesting_depth
 from src.preprocessing.preprocess_pipelines import preprocess_im2latex, preprocess_crohme
 
 # Use them for visualization
-analyze_image_dimensions(dataset_path)
+extract_image_dimensions(df, sample_size=1000)
 processed = preprocess_im2latex(image)
 ```
 
 ---
 
-## 📊 What Changed
+## What Changed
 
 ### Before (Notebooks with everything)
 ```python
@@ -118,21 +112,21 @@ analyze_image_dimensions(...)
 
 ### After (Clean separation)
 ```python
-# src/analysis/image.py
-def analyze_image_dimensions(dataset_path):
+# src/utils/analysis.py
+def extract_image_dimensions(df, sample_size=None):
     # ...logic here...
 
 if __name__ == "__main__":
     # Standalone execution
     
 # notebooks/2_EDA.ipynb
-from src.analysis.image import analyze_image_dimensions
-analyze_image_dimensions(...)  # Just import & use
+from src.utils.analysis import extract_image_dimensions
+extract_image_dimensions(df)  # Just import & use
 ```
 
 ---
 
-## 🎯 Benefits
+## Benefits
 
 1. **Clean Code**: Logic separated from visualization
 2. **Reusable**: Functions can be imported anywhere
@@ -142,7 +136,7 @@ analyze_image_dimensions(...)  # Just import & use
 
 ---
 
-## ⚠️ Important Notes
+## Important Notes
 
 1. **Folder Name**: Data folder is `CHROME` (not CROHME) - fixed in all files
 2. **.npy Format**: Stores normalized float32 arrays, NOT raw uint8 0-255
@@ -153,4 +147,4 @@ analyze_image_dimensions(...)  # Just import & use
 
 ---
 
-## ✅ ALL TASKS COMPLETE!
+## ALL TASKS COMPLETE!

@@ -1,4 +1,4 @@
-# ✅ CODE REORGANIZATION COMPLETE
+# CODE REORGANIZATION COMPLETE
 
 Đã hoàn thành tổ chức lại toàn bộ codebase theo yêu cầu.
 
@@ -8,12 +8,11 @@
 - Chứa tất cả config: paths, target sizes, etc.
 - **Đã fix**: CHROME folder (không phải CROHME)
 
-### 2. `src/analysis/` - EDA Functions
-- **image.py**: Extract dimensions, analyze pixel intensity
-- **label.py**: Tokenize formulas, nesting depth, classify types
-- **compare.py**: Compare im2latex and crohme datasets
-- **structural.py**: Analyze formula structural complexity
-- Tất cả files đều runnable: `python -m src.analysis.image`
+### 2. `src/utils/analysis.py` - Consolidated EDA Functions
+- **All-in-one module**: Merged image, label, structural, and compare analysis
+- Extract dimensions, analyze pixels, tokenize formulas, nesting depth, classify types
+- Compare datasets and analyze preprocessing effects
+- Runnable: `python -m src.utils.analysis`
 
 ### 3. `src/preprocessing/` - Preprocessing Functions
 - **transforms.py**: Basic transforms (pad, grayscale, normalize)
@@ -43,7 +42,7 @@ Hoặc skip formatting:
 
 ---
 
-## 🎯 How to Use
+## How to Use
 
 ### Terminal Execution
 ```bash
@@ -52,10 +51,7 @@ Hoặc skip formatting:
 
 # Individual modules
 python -m src.data_formatting.crohme_formatter
-python -m src.analysis.image
-python -m src.analysis.label
-python -m src.analysis.compare
-python -m src.analysis.structural
+python -m src.utils.analysis
 python -m src.preprocessing.transforms
 python -m src.preprocessing.preprocess_pipelines
 python -m src.preprocessing.batch_process
@@ -64,71 +60,69 @@ python -m src.preprocessing.visualize
 
 ### In Notebooks or Scripts
 ```python
-from src.analysis.image import analyze_image_dimensions
-from src.analysis.label import analyze_labels
+from src.utils.analysis import extract_image_dimensions, tokenize_formula, calculate_nesting_depth
 from src.preprocessing.preprocess_pipelines import preprocess_im2latex, preprocess_crohme
 from src.preprocessing.batch_process import batch_preprocess_and_save
 from src.data_formatting.crohme_formatter import process_crohme_dataset
 
 # Use functions
-analyze_image_dimensions(dataset_path)
+extract_image_dimensions(df, sample_size=1000)
 processed = preprocess_im2latex(image)
 ```
 
 ---
 
-## ✅ All Requirements Met
+## All Requirements Met
 
-1. ✅ **Đưa các hàm vào src/**: Tất cả logic từ notebooks đã move vào src/
-2. ✅ **Code sạch**: Dễ đọc, dễ hiểu, có docstrings
-3. ✅ **if __name__ == "__main__"**: Tất cả .py files runnable
-4. ✅ **pipeline.sh**: Chạy full workflow
-5. ✅ **Notebooks ngắn gọn**: 2.1 & 3.1 chỉ import + visualize
-6. ✅ **Fix paths**: CHROME folder (đúng tên thực tế)
+1. **Đưa các hàm vào src/**: Tất cả logic từ notebooks đã move vào src/
+2. **Code sạch**: Dễ đọc, dễ hiểu, có docstrings
+3. **if __name__ == "__main__"**: Tất cả .py files runnable
+4. **pipeline.sh**: Chạy full workflow
+5. **Notebooks ngắn gọn**: 2.1 & 3.1 chỉ import + visualize
+6. **Fix paths**: CHROME folder (đúng tên thực tế)
 
 ---
 
-## 📁 File Structure
+## File Structure
 
 ```
 /app/
 ├── src/
 │   ├── utils/
 │   │   ├── __init__.py
-│   │   └── constants.py              ✅
+│   │   └── constants.py              
 │   ├── data_formatting/
 │   │   ├── __init__.py
-│   │   └── crohme_formatter.py       ✅
+│   │   └── crohme_formatter.py       
 │   ├── analysis/
 │   │   ├── __init__.py
-│   │   ├── compare.py                ✅
-│   │   ├── image.py                  ✅
-│   │   ├── label.py                  ✅
-│   │   └── structural.py             ✅
+│   │   ├── compare.py                
+│   │   ├── image.py                  
+│   │   ├── label.py                  
+│   │   └── structural.py             
 │   ├── preprocessing/
 │   │   ├── __init__.py
-│   │   ├── batch_process.py          ✅
-│   │   ├── preprocess_pipelines.py   ✅
-│   │   ├── transforms.py             ✅
-│   │   └── visualize.py              ✅
-│   ├── datasets/                     (Coming soon)
-│   ├── engine/                       (Coming soon)
-│   └── models/                       (Coming soon)
+│   │   ├── batch_process.py          
+│   │   ├── preprocess_pipelines.py   
+│   │   ├── transforms.py             
+│   │   └── visualize.py              
+│   ├── datasets/                     
+│   ├── engine/                       
+│   └── models/                       
 │
 ├── notebooks/
-│   ├── 1_Format_CROHME.ipynb         ✅
-│   ├── 2_EDA.ipynb                   ✅
-│   ├── 3_Preprocessing.ipynb         ✅
-│   └── 3.1_Preprocessed_data_format.ipynb  ✅
+│   ├── 1_Format_CROHME.ipynb         
+│   ├── 2_EDA.ipynb                   
+│   ├── 3_Preprocessing.ipynb         
 │
-├── pipeline.sh                        ✅
-├── src/README.md                      ✅
-└── REORGANIZE_SUMMARY.md              ✅
+├── pipeline.sh                        
+├── src/README.md                      
+└── REORGANIZE_SUMMARY.md              
 ```
 
 ---
 
-## 🚀 Next Steps
+## Next Steps
 
 1. **Test pipeline**: Run `./pipeline.sh` để verify toàn bộ workflow
 2. **Use notebooks**: Open notebooks để visualize kết quả
@@ -138,4 +132,4 @@ processed = preprocess_im2latex(image)
 
 ---
 
-**Tất cả đã hoàn thành theo đúng yêu cầu! 🎉**
+**Tất cả đã hoàn thành theo đúng yêu cầu!**

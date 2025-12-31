@@ -40,7 +40,7 @@ TOKEN_RE = re.compile(
     re.VERBOSE,
 )
 
-def tokenize_latex(s: str) -> list[str]:
+def tokenize_latex(s: str) -> list:
     s = normalize_latex(s)
     if not s:
         return []
@@ -52,7 +52,7 @@ def tokenize_latex(s: str) -> list[str]:
 # -----------------------------
 def build_vocab(
     token_lists,
-    max_size=1500,           # gợi ý cho rule-based
+    max_size=1500,
     min_freq=1,
     special_tokens=("<pad>", "<bos>", "<eos>", "<unk>"),
 ):
@@ -70,21 +70,92 @@ def build_vocab(
     return stoi, cnt
 
 
-def main():
-    # Read ONLY first column (formula). CSV has: [formula, image_name]
-    im2 = pd.read_csv(
-        "data/IM2LATEX/label/im2latex_train.csv",
-        header=None,
-        usecols=[0],
-        names=["formula"],
-    )["formula"]
+# -----------------------------
+# 4) Tokenizer class for training
+# -----------------------------
+class LaTeXTokenizer:
+    """
+    LaTeX tokenizer for encoding/decoding sequences.
+    """
+    def __init__(self, vocab_path=None):
+        self.pad_token = "<pad>"
+        self.bos_token = "<bos>"
+        self.eos_token = "<eos>"
+        self.unk_token = "<unk>"
+        
+        if vocab_path and Path(vocab_path).exists():
+            with open(vocab_path, 'r', encoding='utf-8') as f:
+                self.stoi = json.load(f)
+        else:
+            self.stoi = {
+                self.pad_token: 0,
+                self.bos_token: 1,
+                self.eos_token: 2,
+                self.unk_token: 3
+            }
+        
+        self.itos = {v: k for k, v in self.stoi.items()}
+        
+        self.pad_id = self.stoi[self.pad_token]
+        self.bos_id = self.stoi[self.bos_token]
+        self.eos_id = self.stoi[self.eos_token]
+        self.unk_id = self.stoi[self.unk_token]
+    
+    @property
+    def vocab_size(self):
+        return len(self.stoi)
+    
+    def encode(self, text, add_bos=True, add_eos=True):
+        """Encode text to token ids."""
+        tokens = tokenize_latex(text)
+        ids = [self.stoi.get(t, self.unk_id) for t in tokens]
+        
+        if add_bos:
+            ids = [self.bos_id] + ids
+        if add_eos:
+            ids = ids + [self.eos_id]
+        
+        return ids
+    
+    def decode(self, ids, skip_special=True):
+        """Decode token ids to text."""
+        special_ids = {self.pad_id, self.bos_id, self.eos_id}
+        
+        tokens = []
+        for i in ids:
+            if skip_special and i in special_ids:
+                continue
+            if i == self.eos_id:
+                break
+            tokens.append(self.itos.get(i, self.unk_token))
+        
+        return ' '.join(tokens)
+    
+    def batch_encode(self, texts, max_length=None, add_bos=True, add_eos=True):
+        """Encode batch of texts with padding."""
+        encoded = [self.encode(t, add_bos, add_eos) for t in texts]
+        
+        if max_length is None:
+            max_length = max(len(e) for e in encoded)
+        
+        # Pad sequences
+        padded = []
+        for seq in encoded:
+            if len(seq) > max_length:
+                seq = seq[:max_length]
+            else:
+                seq = seq + [self.pad_id] * (max_length - len(seq))
+            padded.append(seq)
+        
+        return padded
 
-    cro = pd.read_csv(
-        "data/CROHME/ground_truth/dataset.csv",
-        header=None,
-        usecols=[0],
-        names=["formula"],
-    )["formula"]
+
+def main():
+    from src.utils.constants import IM2LATEX_TRAIN_CSV, CROHME_CSV_PATH
+    
+    # Read formulas
+    im2 = pd.read_csv(IM2LATEX_TRAIN_CSV)["formula"]
+    cro = pd.read_csv(CROHME_CSV_PATH)["formula"]
 
     formulas = pd.concat([im2, cro], ignore_index=True).map(normalize_latex)
     formulas = formulas[formulas.str.len() > 0]
@@ -102,7 +173,7 @@ def main():
     top20 = cnt.most_common(20)
     suspicious = [t for t in stoi.keys() if ("{" in t or "}" in t) and t not in ["{", "}"]]
 
-    print("✅ Saved vocab.json")
+    print("[OK] Saved vocab.json")
     print("Vocab size:", len(stoi))
     print("Has \\frac:", "\\frac" in stoi, "| Has \\sqrt:", "\\sqrt" in stoi)
     print("Has { } ^ _:", all(t in stoi for t in ["{", "}", "^", "_"]))

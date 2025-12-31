@@ -4,8 +4,15 @@ from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from src.utils.constants import *
-from .preprocess_pipelines import *
+from src.utils.constants import (
+    IM2LATEX_IMAGE_PATH,
+    CROHME_IMAGE_PATH,
+    TARGET_HEIGHT,
+    TARGET_WIDTH,
+    NUM_CHANNELS
+)
+from .preprocess_pipelines import preprocess_im2latex, preprocess_crohme
+from .transforms import crop_content, resize_keep_aspect_ratio, pad_to_width
 
 # Progress of preprocessing
 def visualize_preprocessing(df1, preprocess_df, dataset_type='im2latex', num_samples=3):
@@ -35,13 +42,13 @@ def visualize_preprocessing(df1, preprocess_df, dataset_type='im2latex', num_sam
         ax = axes[idx, 0]
         ax.imshow(original, cmap='gray')
         ax.set_title(
-            f'Original: {original.size[0]}×{original.size[1]}',
+            f'Original: {original.size[0]}x{original.size[1]}',
             fontsize=12, fontweight='bold'
         )
         ax.set_xticks([])
         ax.set_yticks([])
         
-        # 🔲 VIỀN
+        # Border
         for spine in ax.spines.values():
             spine.set_visible(True)
             spine.set_linewidth(2)
@@ -53,13 +60,13 @@ def visualize_preprocessing(df1, preprocess_df, dataset_type='im2latex', num_sam
         if preprocessed is not None:
             ax.imshow(preprocessed, cmap='gray')
             ax.set_title(
-                f'Preprocessed: {preprocessed.shape[1]}×{preprocessed.shape[0]}',
+                f'Preprocessed: {preprocessed.shape[1]}x{preprocessed.shape[0]}',
                 fontsize=12, fontweight='bold'
             )
             ax.set_xticks([])
             ax.set_yticks([])
             
-            # 🔲 VIỀN
+            # Border
             for spine in ax.spines.values():
                 spine.set_visible(True)
                 spine.set_linewidth(2)

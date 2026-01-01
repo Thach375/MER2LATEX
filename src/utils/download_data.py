@@ -1,16 +1,3 @@
-"""
-Module de tai va xu ly dataset CROHME va IM2LATEX
-Chuyen doi file InkML thanh anh va tao file CSV dataset hoan chinh
-
-HUONG DAN SETUP KAGGLE CREDENTIALS:
-1. Dang nhap vao https://www.kaggle.com
-2. Vao Account Settings -> API -> Create New Token
-3. Download file kaggle.json
-4. Dat file vao ~/.kaggle/kaggle.json hoac set environment variables:
-   export KAGGLE_USERNAME="your_username"
-   export KAGGLE_KEY="your_api_key"
-"""
-
 import os
 import shutil
 import subprocess
@@ -23,64 +10,22 @@ from tqdm import tqdm
 
 
 def setup_kaggle_credentials(username=None, key=None, required=True):
-    """
-    Setup Kaggle credentials tu environment variables hoac tham so
-    
-    Args:
-        username: Kaggle username (optional, lay tu env neu khong co)
-        key: Kaggle API key (optional, lay tu env neu khong co)
-        required: Neu True, raise exception khi khong co credentials
-        
-    Returns:
-        bool: True neu setup thanh cong
-        
-    Raises:
-        SystemExit: Neu required=True va khong co credentials
-    """
-    # Kiem tra credentials da co chua
+    """Setup Kaggle credentials"""
     kaggle_dir = os.path.expanduser("~/.kaggle")
     kaggle_json = os.path.join(kaggle_dir, "kaggle.json")
     
     if os.path.exists(kaggle_json):
-        print("[OK] Kaggle credentials da ton tai")
         return True
     
-    # Lay tu environment variables
     username = username or os.environ.get("KAGGLE_USERNAME")
     key = key or os.environ.get("KAGGLE_KEY")
     
     if not username or not key:
-        print("")
-        print("=" * 70)
-        print("[ERROR] KAGGLE CREDENTIALS REQUIRED!")
-        print("=" * 70)
-        print("")
-        print("De download datasets, ban can setup Kaggle credentials:")
-        print("")
-        print("  BUOC 1: Lay API key")
-        print("    - Dang nhap: https://www.kaggle.com")
-        print("    - Vao: Settings -> API -> Create New Token")
-        print("    - Download file kaggle.json")
-        print("")
-        print("  BUOC 2: Setup credentials (chon 1 trong 2 cach)")
-        print("")
-        print("    Cach A - Dung script:")
-        print("      ./setup_kaggle.sh YOUR_USERNAME YOUR_API_KEY")
-        print("")
-        print("    Cach B - Set environment variables:")
-        print("      export KAGGLE_USERNAME='your_username'")
-        print("      export KAGGLE_KEY='your_api_key'")
-        print("")
-        print("  BUOC 3: Chay lai pipeline")
-        print("      ./pipeline.sh")
-        print("")
-        print("=" * 70)
-        
         if required:
+            print("[ERROR] Kaggle credentials not found!")
             raise SystemExit(1)
         return False
     
-    # Tao thu muc va file
     os.makedirs(kaggle_dir, exist_ok=True)
     
     import json
@@ -88,75 +33,30 @@ def setup_kaggle_credentials(username=None, key=None, required=True):
         json.dump({"username": username, "key": key}, f)
     
     os.chmod(kaggle_json, 0o600)
-    print(f"[OK] Da tao Kaggle credentials tai {kaggle_json}")
     return True
 
-
 def download_with_kaggle_cli(dataset_name, target_path):
-    """
-    Download dataset bang Kaggle CLI
-    
-    Args:
-        dataset_name: Ten dataset tren Kaggle (owner/dataset)
-        target_path: Thu muc dich
-        
-    Returns:
-        bool: True neu thanh cong
-    """
+    """Download dataset bang Kaggle CLI"""
     try:
-        # Tao thu muc dich
         os.makedirs(target_path, exist_ok=True)
-        
-        # Download bang kaggle CLI
-        cmd = [
-            "kaggle", "datasets", "download",
-            "-d", dataset_name,
-            "-p", target_path,
-            "--unzip"
-        ]
-        
-        print(f"  Running: {' '.join(cmd)}")
+        cmd = ["kaggle", "datasets", "download", "-d", dataset_name, "-p", target_path, "--unzip"]
         result = subprocess.run(cmd, capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            return True
-        else:
-            print(f"  CLI Error: {result.stderr}")
-            return False
-            
-    except FileNotFoundError:
-        print("  [WARNING] Kaggle CLI chua duoc cai dat. Cai bang: pip install kaggle")
-        return False
-    except Exception as e:
-        print(f"  [ERROR] {e}")
+        return result.returncode == 0
+    except:
         return False
 
 
 def download_with_kagglehub(dataset_name, target_path):
-    """
-    Download dataset bang kagglehub library
-    
-    Args:
-        dataset_name: Ten dataset tren Kaggle
-        target_path: Thu muc dich
-        
-    Returns:
-        bool: True neu thanh cong
-    """
+    """Download dataset bang kagglehub library"""
     try:
         import kagglehub
-        
         cache_path = kagglehub.dataset_download(dataset_name)
         
-        # Kiem tra cache co noi dung khong
         if not os.path.exists(cache_path) or not os.listdir(cache_path):
-            print(f"  [WARNING] kagglehub tra ve cache rong")
             return False
         
-        # Tao thu muc dich
         os.makedirs(target_path, exist_ok=True)
         
-        # Copy noi dung tu cache vao target
         for item in os.listdir(cache_path):
             src = os.path.join(cache_path, item)
             dst = os.path.join(target_path, item)
@@ -170,132 +70,62 @@ def download_with_kagglehub(dataset_name, target_path):
             shutil.copytree(src, dst) if os.path.isdir(src) else shutil.copy2(src, dst)
         
         return True
-        
-    except ImportError:
-        print("  [WARNING] kagglehub chua duoc cai dat")
-        return False
-    except Exception as e:
-        print(f"  [ERROR] kagglehub: {e}")
+    except:
         return False
 
 
 def download_single_dataset(dataset_name, target_path):
-    """
-    Download mot dataset, thu nhieu phuong thuc
-    
-    Args:
-        dataset_name: Ten dataset (owner/dataset)
-        target_path: Thu muc dich
-        
-    Returns:
-        bool: True neu thanh cong
-    """
-    print(f"[DOWNLOAD] {dataset_name} -> {target_path}")
-    
-    # Thu kaggle CLI truoc (tin cay hon)
+    """Download mot dataset, thu nhieu phuong thuc"""
     if setup_kaggle_credentials():
-        print("  Trying Kaggle CLI...")
         if download_with_kaggle_cli(dataset_name, target_path):
             return True
     
-    # Thu kagglehub
-    print("  Trying kagglehub...")
     if download_with_kagglehub(dataset_name, target_path):
         return True
     
-    print(f"[FAILED] Khong the tai {dataset_name}")
-    print("  Vui long download thu cong tu:")
-    print(f"  https://www.kaggle.com/datasets/{dataset_name}")
-    print(f"  Giai nen vao: {target_path}")
     return False
 
 
 def download_datasets(target_folder="data"):
-    """
-    Tai datasets tu Kaggle (CROHME va IM2LATEX)
+    """Tai datasets tu Kaggle (CROHME va IM2LATEX)"""
+    setup_kaggle_credentials(required=True)
     
-    BAT BUOC phai co Kaggle credentials truoc khi chay.
-    
-    Args:
-        target_folder: Thu muc dich de luu datasets
-        
-    Returns:
-        dict: Thong tin ve cac datasets da tai
-        
-    Raises:
-        SystemExit: Neu khong co Kaggle credentials
-    """
-    # BAT BUOC kiem tra credentials truoc
-    print("[CHECK] Kiem tra Kaggle credentials...")
-    setup_kaggle_credentials(required=True)  # Se exit neu khong co
-    
-    # Dinh nghia datasets can tai
     datasets = [
         {
             "name": "rtatman/handwritten-mathematical-expressions",
             "target": os.path.join(target_folder, "CROHME"),
-            "required_check": lambda p: any(f.endswith('.inkml') for r, d, files in os.walk(p) for f in files)
+            "check": lambda p: any(f.endswith('.inkml') for r, d, files in os.walk(p) for f in files)
         },
         {
             "name": "shahrukhkhan/im2latex100k", 
             "target": os.path.join(target_folder, "IM2LATEX"),
-            "required_check": lambda p: any(f.endswith('.csv') for f in os.listdir(p)) if os.path.exists(p) else False
+            "check": lambda p: any(f.endswith('.csv') for f in os.listdir(p)) if os.path.exists(p) else False
         }
     ]
-    
-    downloaded = []
-    failed = []
     
     for dataset in datasets:
         dataset_name = dataset["name"]
         target_path = dataset["target"]
-        check_func = dataset.get("required_check", lambda p: bool(os.listdir(p)))
+        check_func = dataset["check"]
         
-        # Kiem tra da co data hop le chua
         if os.path.exists(target_path) and check_func(target_path):
-            print(f"[OK] Dataset {os.path.basename(target_path)} da ton tai va hop le")
+            print(f"[OK] {os.path.basename(target_path)} da ton tai")
             continue
         
-        # Xoa folder rong neu co
         if os.path.exists(target_path) and not os.listdir(target_path):
             os.rmdir(target_path)
         
-        # Download
-        if download_single_dataset(dataset_name, target_path):
-            downloaded.append(target_path)
-            print(f"[OK] Da tai {os.path.basename(target_path)}")
-        else:
-            failed.append(dataset_name)
+        print(f"[DOWNLOAD] {dataset_name}...")
+        if not download_single_dataset(dataset_name, target_path):
+            print(f"[ERROR] Khong the tai {dataset_name}")
+            raise SystemExit(1)
+        print(f"[OK] Da tai {os.path.basename(target_path)}")
     
-    # Kiem tra tat ca datasets da download thanh cong chua
-    if failed:
-        print("")
-        print("=" * 70)
-        print("[ERROR] DOWNLOAD THAT BAI!")
-        print("=" * 70)
-        for ds in failed:
-            print(f"  - {ds}")
-        print("")
-        print("Vui long kiem tra:")
-        print("  1. Kaggle credentials hop le")
-        print("  2. Ket noi internet")
-        print("  3. Dataset van con tren Kaggle")
-        print("")
-        raise SystemExit(1)
-    
-    return {"downloaded": downloaded, "failed": failed, "datasets": datasets}
+    return True
 
 
 def parse_inkml_traces(inkml_file):
-    """
-    Parse InkML file và trích xuất traces
-    
-    Args:
-        inkml_file: Đường dẫn đến file InkML
-        
-    Returns:
-        list: Danh sách các traces, mỗi trace là list các điểm (x, y)
-    """
+    """Parse InkML file va trích xuat traces"""
     try:
         tree = ET.parse(inkml_file)
         root = tree.getroot()
@@ -322,15 +152,7 @@ def parse_inkml_traces(inkml_file):
 
 
 def get_ground_truth(inkml_file):
-    """
-    Lấy ground truth (công thức LaTeX) từ file InkML
-    
-    Args:
-        inkml_file: Đường dẫn đến file InkML
-        
-    Returns:
-        str: Ground truth hoặc None nếu không có
-    """
+    """Lay ground truth (công thức LaTeX) tu file InkML"""
     try:
         tree = ET.parse(inkml_file)
         root = tree.getroot()
@@ -339,7 +161,6 @@ def get_ground_truth(inkml_file):
         for annotation in root.findall('.//ink:annotation', ns):
             if annotation.get('type') == 'truth':
                 truth = annotation.text.strip() if annotation.text else ""
-                # Loại bỏ $ ở đầu và cuối nếu có
                 truth = truth.strip('$').strip()
                 return truth
         
@@ -349,23 +170,11 @@ def get_ground_truth(inkml_file):
 
 
 def traces_to_image(traces, img_size=(400, 400), padding=20, line_width=2):
-    """
-    Chuyển đổi traces thành ảnh
-    
-    Args:
-        traces: List các traces từ InkML
-        img_size: Kích thước ảnh đầu ra (width, height)
-        padding: Khoảng cách padding
-        line_width: Độ dày của nét vẽ
-        
-    Returns:
-        PIL.Image: Ảnh đã render hoặc None nếu có lỗi
-    """
+    """Chuyen doi traces thanh anh"""
     if not traces:
         return None
     
     try:
-        # Tìm bounding box
         all_points = [p for trace in traces for p in trace]
         if not all_points:
             return None
@@ -376,27 +185,22 @@ def traces_to_image(traces, img_size=(400, 400), padding=20, line_width=2):
         min_x, max_x = min(xs), max(xs)
         min_y, max_y = min(ys), max(ys)
         
-        # Tránh chia cho 0
         width = max_x - min_x
         height = max_y - min_y
         
         if width == 0 or height == 0:
             return None
         
-        # Tính scale để fit vào ảnh
         scale = min((img_size[0] - 2*padding) / width, 
                     (img_size[1] - 2*padding) / height)
         
-        # Tạo ảnh trắng
         img = Image.new('RGB', img_size, 'white')
         draw = ImageDraw.Draw(img)
         
-        # Vẽ từng trace
         for trace in traces:
             if len(trace) < 2:
                 continue
             
-            # Scale và translate points
             scaled_trace = [
                 (
                     (x - min_x) * scale + padding,
@@ -405,7 +209,6 @@ def traces_to_image(traces, img_size=(400, 400), padding=20, line_width=2):
                 for x, y in trace
             ]
             
-            # Vẽ đường nối
             for i in range(len(scaled_trace) - 1):
                 draw.line([scaled_trace[i], scaled_trace[i+1]], 
                          fill='black', width=line_width)
@@ -416,158 +219,210 @@ def traces_to_image(traces, img_size=(400, 400), padding=20, line_width=2):
 
 
 def process_crohme_dataset(crohme_path, output_dir="data/preprocessed/crohme"):
-    """
-    Xu ly dataset CROHME va tao cau truc dataset hoan chinh
-    
-    Args:
-        crohme_path: Duong dan den thu muc CROHME
-        output_dir: Thu muc dau ra cho dataset da xu ly
-        
-    Returns:
-        dict: Thong ke ve qua trinh xu ly
-    """
+    """Xu ly dataset CROHME va tao cau truc dataset hoan chinh"""
     crohme_path = Path(crohme_path)
     output_path = Path(output_dir)
     
-    # Tao thu muc dich
     ground_truth_dir = output_path / "ground_truth"
     non_ground_truth_dir = output_path / "non_ground_truth"
     
     gt_images_dir = ground_truth_dir / "images"
     ngt_images_dir = non_ground_truth_dir / "images"
     
-    # Tao thu muc neu chua co
     gt_images_dir.mkdir(parents=True, exist_ok=True)
     ngt_images_dir.mkdir(parents=True, exist_ok=True)
     
-    # Danh sach de luu vao CSV
-    gt_data = []  # [(formula, image_name), ...]
-    ngt_data = []  # [image_name, ...]
+    gt_data = []
+    ngt_data = []
     
-    # Tim tat ca file InkML
     inkml_files = list(crohme_path.rglob("*.inkml"))
+    inkml_files = [f for f in inkml_files if output_dir not in str(f)]
     
-    # Loc bo cac file trong processed_data de tranh de quy
-    inkml_files = [f for f in inkml_files 
-                   if "processed_data" not in str(f) and 
-                      "ground_truth" not in str(f) and 
-                      "non_ground_truth" not in str(f)]
+    if not inkml_files:
+        print(f"[WARNING] Khong tim thay file InkML nao")
+        return {'ground_truth': 0, 'non_ground_truth': 0, 'errors': 0, 'total': 0}
     
-    print(f"[INFO] Tim thay {len(inkml_files)} file InkML")
+    print(f"[INFO] Xu ly {len(inkml_files)} file InkML...")
     
-    # Dem so luong
     gt_count = 0
     ngt_count = 0
     error_count = 0
     
-    # Xu ly tung file voi progress bar
-    for inkml_file in tqdm(inkml_files, desc="Xu ly files"):
-        # Parse traces
+    for inkml_file in tqdm(inkml_files, desc="Processing CROHME"):
         traces = parse_inkml_traces(inkml_file)
         if not traces:
             error_count += 1
             continue
         
-        # Tao ten file anh (dung ten file goc)
         image_name = inkml_file.stem + ".png"
-        
-        # Tao anh
         img = traces_to_image(traces)
+        
         if img is None:
             error_count += 1
             continue
         
-        # Kiem tra co ground truth khong
         truth = get_ground_truth(inkml_file)
         
         if truth:
-            # Co ground truth
             img_path = gt_images_dir / image_name
             img.save(img_path)
-            gt_data.append({
-                'formula': truth,
-                'image': image_name
-            })
+            gt_data.append({'formula': truth, 'image': image_name})
             gt_count += 1
         else:
-            # Khong co ground truth
             img_path = ngt_images_dir / image_name
             img.save(img_path)
-            ngt_data.append({
-                'image': image_name
-            })
+            ngt_data.append({'image': image_name})
             ngt_count += 1
     
-    # Luu CSV cho ground truth
     if gt_data:
-        gt_df = pd.DataFrame(gt_data)
-        gt_csv_path = ground_truth_dir / "dataset.csv"
-        gt_df.to_csv(gt_csv_path, index=False, encoding='utf-8')
+        pd.DataFrame(gt_data).to_csv(ground_truth_dir / "dataset.csv", index=False, encoding='utf-8')
     
-    # Luu CSV cho non ground truth
     if ngt_data:
-        ngt_df = pd.DataFrame(ngt_data)
-        ngt_csv_path = non_ground_truth_dir / "dataset.csv"
-        ngt_df.to_csv(ngt_csv_path, index=False, encoding='utf-8')
+        pd.DataFrame(ngt_data).to_csv(non_ground_truth_dir / "dataset.csv", index=False, encoding='utf-8')
     
-    # Bao cao tong hop
-    print(f"\n[OK] Xu ly xong: {gt_count} co ground truth | {ngt_count} khong co | {error_count} loi")
+    print(f"[OK] CROHME: {gt_count} GT | {ngt_count} NGT | {error_count} errors")
     
     return {
         'ground_truth': gt_count,
         'non_ground_truth': ngt_count,
         'errors': error_count,
-        'total': len(inkml_files),
-        'output_dir': str(output_path)
+        'total': len(inkml_files)
+    }
+
+
+def merge_datasets(crohme_processed_path, im2latex_path, output_path="data/final_dataset"):
+    """Hop nhat CROHME va IM2LATEX vao final_dataset"""
+    crohme_path = Path(crohme_processed_path)
+    im2latex_path = Path(im2latex_path)
+    final_path = Path(output_path)
+    
+    gt_dir = final_path / "ground_truth" / "images"
+    ngt_dir = final_path / "non_ground_truth" / "images"
+    gt_dir.mkdir(parents=True, exist_ok=True)
+    ngt_dir.mkdir(parents=True, exist_ok=True)
+    
+    gt_data = []
+    ngt_data = []
+    
+    print("[INFO] Merge datasets...")
+    
+    # Xu ly CROHME
+    crohme_gt_csv = crohme_path / "ground_truth" / "dataset.csv"
+    crohme_ngt_csv = crohme_path / "non_ground_truth" / "dataset.csv"
+    crohme_gt_img_dir = crohme_path / "ground_truth" / "images"
+    crohme_ngt_img_dir = crohme_path / "non_ground_truth" / "images"
+    
+    crohme_gt_count = 0
+    crohme_ngt_count = 0
+    
+    if crohme_gt_csv.exists():
+        df = pd.read_csv(crohme_gt_csv)
+        for _, row in tqdm(df.iterrows(), total=len(df), desc="Merging CROHME GT"):
+            src = crohme_gt_img_dir / row['image']
+            dst = gt_dir / f"CROHME_{row['image']}"
+            if src.exists():
+                Image.open(src).save(dst)
+                gt_data.append({'formula': row['formula'], 'image': dst.name})
+                crohme_gt_count += 1
+    
+    if crohme_ngt_csv.exists():
+        df = pd.read_csv(crohme_ngt_csv)
+        for _, row in tqdm(df.iterrows(), total=len(df), desc="Merging CROHME NGT"):
+            src = crohme_ngt_img_dir / row['image']
+            dst = ngt_dir / f"CROHME_{row['image']}"
+            if src.exists():
+                Image.open(src).save(dst)
+                ngt_data.append({'image': dst.name})
+                crohme_ngt_count += 1
+    
+    # Xu ly IM2LATEX
+    im2latex_csv = im2latex_path / "dataset.csv"
+    im2latex_img_dir = im2latex_path / "dataset_images"
+    
+    im2latex_gt_count = 0
+    im2latex_ngt_count = 0
+    
+    if im2latex_csv.exists() and im2latex_img_dir.exists():
+        df = pd.read_csv(im2latex_csv)
+        for _, row in tqdm(df.iterrows(), total=len(df), desc="Merging IM2LATEX"):
+            src = im2latex_img_dir / row['image']
+            if not src.exists():
+                continue
+                
+            if 'formula' in row and pd.notna(row['formula']) and str(row['formula']).strip():
+                dst = gt_dir / f"IM2LATEX_{row['image']}"
+                Image.open(src).save(dst)
+                gt_data.append({'formula': row['formula'], 'image': dst.name})
+                im2latex_gt_count += 1
+            else:
+                dst = ngt_dir / f"IM2LATEX_{row['image']}"
+                Image.open(src).save(dst)
+                ngt_data.append({'image': dst.name})
+                im2latex_ngt_count += 1
+    
+    # Luu CSV tong hop
+    if gt_data:
+        pd.DataFrame(gt_data).to_csv(final_path / "ground_truth" / "dataset.csv", 
+                                      index=False, encoding='utf-8')
+    
+    if ngt_data:
+        pd.DataFrame(ngt_data).to_csv(final_path / "non_ground_truth" / "dataset.csv", 
+                                       index=False, encoding='utf-8')
+    
+    print(f"[OK] Final dataset: {len(gt_data)} GT | {len(ngt_data)} NGT")
+    print(f"     CROHME: {crohme_gt_count} GT, {crohme_ngt_count} NGT")
+    print(f"     IM2LATEX: {im2latex_gt_count} GT, {im2latex_ngt_count} NGT")
+    
+    return {
+        'ground_truth': len(gt_data),
+        'non_ground_truth': len(ngt_data),
+        'output_dir': str(final_path)
     }
 
 
 def main():
-    """
-    Ham chinh de chay toan bo pipeline: tai dataset va xu ly
-    """
-    print("[START] Tai va xu ly datasets\n")
+    """Ham chinh de chay toan bo pipeline"""
+    print("="*80)
+    print("DATASET PROCESSING PIPELINE - CROHME & IM2LATEX")
+    print("="*80)
     
     # Buoc 1: Tai datasets
-    print("[STEP 1] Tai datasets (CROHME va IM2LATEX)")
-    download_result = download_datasets(target_folder="data")
+    print("\n[STEP 1/3] Download datasets")
+    print("-"*80)
+    download_datasets(target_folder="data")
     
-    if download_result is None:
-        print("[ERROR] Khong the tai datasets")
-        return
-    
-    # Buoc 2: Xu ly CROHME dataset (InkML -> Images)
-    print("\n[STEP 2] Xu ly CROHME (InkML -> Images)")
-    
+    # Buoc 2: Xu ly CROHME (InkML -> Images)
+    print("\n[STEP 2/3] Process CROHME (InkML -> Images)")
+    print("-"*80)
     crohme_path = "data/CROHME"
     if os.path.exists(crohme_path):
-        process_result = process_crohme_dataset(
+        process_crohme_dataset(
             crohme_path=crohme_path,
             output_dir="data/preprocessed/crohme"
         )
-        print(f"[OK] CROHME: {process_result['ground_truth']} samples -> data/preprocessed/crohme/")
     else:
         print(f"[SKIP] CROHME khong ton tai tai {crohme_path}")
     
-    # Buoc 3: Kiem tra IM2LATEX (da co san images, chi can verify)
-    print("\n[STEP 3] Kiem tra IM2LATEX")
-    
+    # Buoc 3: Merge CROHME + IM2LATEX -> final_dataset
+    print("\n[STEP 3/3] Merge datasets -> final_dataset")
+    print("-"*80)
     im2latex_path = "data/IM2LATEX"
     if os.path.exists(im2latex_path):
-        # IM2LATEX da co san images va CSV, chi can kiem tra
-        csv_files = list(Path(im2latex_path).glob("*.csv"))
-        image_dirs = [d for d in Path(im2latex_path).iterdir() if d.is_dir()]
+        merge_result = merge_datasets(
+            crohme_processed_path="data/preprocessed/crohme",
+            im2latex_path=im2latex_path,
+            output_path="data/final_dataset"
+        )
         
-        print(f"[OK] IM2LATEX: {len(csv_files)} CSV files, {len(image_dirs)} image folders")
-        for csv in csv_files:
-            df = pd.read_csv(csv)
-            print(f"     - {csv.name}: {len(df)} samples")
+        print("\n" + "="*80)
+        print("HOAN TAT!")
+        print("="*80)
+        print(f"Location: {merge_result['output_dir']}")
+        print(f"  Ground truth: {merge_result['ground_truth']} samples")
+        print(f"  Non ground truth: {merge_result['non_ground_truth']} samples")
+        print("="*80)
     else:
         print(f"[SKIP] IM2LATEX khong ton tai tai {im2latex_path}")
-    
-    print(f"\n[DONE] Hoan tat!")
-    print(f"  - CROHME processed: data/preprocessed/crohme/")
-    print(f"  - IM2LATEX raw: data/IM2LATEX/")
 
 
 if __name__ == "__main__":

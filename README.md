@@ -1,181 +1,148 @@
-# Document Heading  
+# MER2LaTeX - Math Expression Recognition
 
-📘 MER2LaTeX — Deep Learning Project  
+Deep Learning Project: Image -> LaTeX -> (Optional) SymPy
 
-Math Expression Recognition: Image → LaTeX → (Optional) SymPy  
+## Project Structure
 
-✨ Overview  
-
-Math Expression Recognition (MER) là bài toán chuyển ảnh công thức toán học thành chuỗi LaTeX.  
-
-Đầu vào có thể là:  
-• Ảnh chụp bảng/giấy  
-• Ảnh scan  
-• Công thức in  
-• Công thức viết tay  
-
-Mục tiêu của dự án:  
-• Trích xuất công thức toán học từ ảnh
-• Sinh ra LaTeX chính xác
-• (Tuỳ chọn) gửi LaTeX vào SymPy để tính toán
-• Xây dựng và so sánh nhiều mô hình Deep Learning
-
-🎯 Project Goals  
-
-• Xây dựng pipeline MER hoàn chỉnh  
-• Triển khai và so sánh 4 mô hình Deep Learning  
-• Preprocessing + augmentation  
-• Đánh giá bằng BLEU, Edit Distance, Exact Match  
-• Demo web MER → LaTeX bằng Gradio  
-• Môi trường huấn luyện đầy đủ bằng Docker  
-• Training reproducible  
-• Báo cáo + slide hoàn chỉnh  
-
-🧠 MER Pipeline  
-Image → Encoder (CNN / ViT) → Decoder (LSTM / Transformer) → LaTeX Tokens  
-
-🏗️ Implemented Models  
-
-1. CNN + BiLSTM + CTC (baseline OCR)  
-
-• Kiến trúc OCR truyền thống  
-• Dùng làm baseline để so sánh  
-
-2. ResNet / EfficientNet + Attention Decoder  
-
-• Encoder cực mạnh  
-• Decoder sinh LaTeX bằng attention autoregressive  
-
-3. ViT Encoder + Transformer Decoder  
-
-• Khai thác sức mạnh Vision Transformer  
-• Phù hợp với công thức phức tạp, nhiều ký hiệu  
-
-4. DONUT-style (OCR-free)  
-
-• Không cần CTC  
-• Encoder Vision Transformer → trực tiếp sinh token  
-• Gần giống mô hình của NAVER CLova  
-
-🧰 Additional Components  
-
-• Preprocessing & augmentation ảnh  
-• Tokenizer (character / BPE / WordPiece)  
-• Optimizer, scheduler, gradient clipping  
-• Evaluation: BLEU, Edit-distance, Exact Match  
-• Logging bằng TensorBoard  
-• Gradio demo MER → LaTeX  
-• Docker hoá toàn bộ môi trường  
-
-🐳 Docker & Development Guide  
-
-1. Clone project
 ```
-git clone https://github.com/Thach375/MER2LATEX.git  
-cd MER2LATEX  
+/app/
+|-- src/
+|   |-- data/                     # Dataset and evaluation
+|   |   |-- dataset.py            # MERDataset, get_dataloader
+|   |   |-- evaluation.py         # Metrics, error analysis
+|   |-- models/                   # Model architectures
+|   |   |-- components.py         # Encoders, decoders, attention
+|   |   |-- architectures.py      # Model A/B/C/D definitions
+|   |-- training/                 # Training utilities
+|   |   |-- trainer.py            # Main Trainer class
+|   |   |-- callbacks.py          # EarlyStopping, ModelCheckpoint
+|   |-- preprocessing/            # Image preprocessing
+|   |   |-- transforms.py         # Image transforms
+|   |   |-- preprocess_pipelines.py
+|   |   |-- batch_process.py
+|   |-- tokenizer/
+|   |   |-- tokenize.py           # LaTeX tokenizer
+|   |-- utils/
+|   |   |-- constants.py          # Configuration and paths
+|   |   |-- download_data.py      # Download and process datasets
+|   |   |-- analysis.py           # EDA functions
+|-- data/
+|   |-- IM2LATEX/                 # IM2LATEX raw data (from Kaggle)
+|   |-- CROHME/                   # CROHME raw InkML files
+|   |-- preprocessed/             # Processed outputs
+|       |-- crohme/               # CROHME processed images
+|       |-- im2latex/             # IM2LATEX processed images
+|-- checkpoints/                  # Model checkpoints
+|-- logs/                         # Training logs
+|-- pipeline.sh                   # Full pipeline script
 ```
 
-2. Build & Run Docker (Mở docker desktop trước, và chạy lệnh trên Terminal)
+## Models
+
+| Model | Architecture | Params | Description |
+|-------|-------------|--------|-------------|
+| Model A | CNN + BiLSTM + CTC | 13.4M | Baseline OCR |
+| Model B | ResNet + Attention | 12.6M | Seq2seq with Bahdanau attention |
+| Model C | ViT + Transformer | 26.1M | Full transformer-based |
+| Model D | TrOCR-style | 26.1M | Pretrained vision encoder |
+
+## Quick Start
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
 ```
-docker-compose build  
+
+### 2. Run Full Pipeline
+```bash
+./pipeline.sh
+```
+
+This will:
+1. Download CROHME and IM2LATEX datasets from Kaggle
+2. Process CROHME InkML files -> images
+3. Run preprocessing pipeline
+4. Train model (default: model_b)
+
+### 3. Train Specific Model
+```bash
+python -m src.training.trainer --model model_a --epochs 30
+python -m src.training.trainer --model model_b --epochs 30
+python -m src.training.trainer --model model_c --epochs 30
+python -m src.training.trainer --model model_d --epochs 30
+```
+
+## Training Options
+
+```bash
+python -m src.training.trainer \
+    --model model_b \
+    --dataset im2latex \
+    --epochs 30 \
+    --batch-size 4 \
+    --lr 1e-4 \
+    --checkpoint-metric val_loss \
+    --patience 5 \
+    --no-wandb              # Disable wandb logging
+    --resume checkpoint.pt  # Resume from checkpoint
+```
+
+## Training Features
+
+- **Wandb Integration**: Automatic experiment tracking
+- **Checkpoint Saving**: Best + latest + epoch checkpoints
+- **Early Stopping**: Stop when metric stops improving
+- **Mixed Precision (AMP)**: Faster training on GPU
+- **Gradient Clipping**: Prevent exploding gradients
+
+### Checkpoint Structure
+```
+checkpoints/
+|-- model_b/
+|   |-- 20231231_120000/
+|       |-- best.pt           # Best checkpoint
+|       |-- latest.pt         # Latest checkpoint
+```
+
+## Usage in Code
+
+```python
+from src.models import create_model
+from src.training import train_model
+from src.data import get_dataloader, compute_metrics
+
+# Train
+results = train_model('model_b', num_epochs=30, batch_size=4)
+
+# Or use Trainer class for more control
+from src.training import Trainer
+trainer = Trainer(
+    model_name='model_b',
+    num_epochs=30,
+    use_wandb=True,
+    early_stopping=True
+)
+results = trainer.train()
+```
+
+## Datasets
+
+| Dataset | Type | Samples | Description |
+|---------|------|---------|-------------|
+| IM2LATEX | Printed | ~100k | Rendered LaTeX formulas |
+| CROHME | Handwritten | ~10k | Handwritten math expressions |
+
+## Evaluation Metrics
+
+- **Exact Match**: Percentage of exact LaTeX matches
+- **BLEU Score**: N-gram overlap with reference
+- **Edit Distance**: Normalized Levenshtein distance
+- **SymPy Equivalence**: Mathematical equivalence check
+
+## Docker
+
+```bash
+docker-compose build
 docker-compose up -d
+# Attach VSCode: Ctrl+Shift+P -> Dev Containers: Attach
 ```
-
-3. Attach VSCode Dev Container  
-
-Trong VSCode:  
-```
-• Nhấn Ctrl + Shift + P  
-• Chọn: Dev Containers: Attach to Running Container  
-• Chọn: mer2latex-container  
-• Nó sẽ pop ra cửa số vscode mới, chọn Select Foulder, rồi chọn /app, ấn Ok
-
-→ Chỉnh code trực tiếp trong Docker.  
-```
-
-4. Chạy Jupyter Lab
-```
-docker exec -it mer2latex-container bash  
-jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser  
-
-Truy cập: http://localhost:8888  
-```
-
-5. Chạy Gradio demo
-```
-docker exec -it mer2latex-container bash  
-python app/gradio_app.py  
-Truy cập demo: http://localhost:7860  
-```
-
-6. Push code lên GitHub
-```
-git add .  
-git commit -m "your message"  
-```
-
--> Tạo nhánh  
-```
-git checkout -b "ten_nhanh"
-git push origin "ten_nhanh"
-```
-
--> Hoặc nhánh main
-```
-git push origin main
-```
-
-📁 Project Structure  
-MER2LATEX/  
-│
-├── src/
-│   ├── models/           # CNN-LSTM, Transformer, ViT, Donut  
-│   ├── datasets/  
-│   ├── engine/           # train loop, eval loop  
-│   ├── utils/            # tokenizer, augmentation, preprocess  
-│   └── train.py          # main training script  
-│  
-├── app/  
-│   └── gradio_app.py     # MER → LaTeX demo  
-│  
-├── notebooks/            # EDA + visualization  
-├── data/                 # ignored by Git  
-├── models/               # checkpoints  
-├── logs/                 # TensorBoard logs  
-│  
-├── requirements.txt  
-├── Dockerfile  
-├── docker-compose.yml  
-├── .gitignore  
-├── .dockerignore  
-└── README.md  
-
-🧪 Tech Stack
-
-• PyTorch  
-• CNN / LSTM / Transformer / ViT  
-• OpenCV + PIL  
-• BPE / WordPiece tokenizer  
-• Gradio  
-• TensorBoard  
-• Docker + VSCode Dev Container  
-
-📦 Deliverables  
-  
-• Pipeline MER hoàn chỉnh  
-• 4 mô hình Deep Learning để so sánh  
-• Demo MER → LaTeX  
-• Training reproducible với Docker  
-• Notebook EDA  
-• Báo cáo + slide  
-• Tích hợp LaTeX → SymPy  
-
-🔧 Notes  
-
-• Khi thay đổi Dockerfile, docker-compose.yml, requirements.txt → cần build lại Docker  
-```
-docker-compose build  
-docker-compose up -d  
-```
-• Không push dữ liệu thật → folder data/ đã được ignore  
-• Checkpoints nặng → nên dùng Git LFS  

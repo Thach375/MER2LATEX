@@ -1,7 +1,7 @@
 """
 Batch Preprocessing and Saving
 ================================
-Process entire dataset and save as .npy files.
+Process entire dataset and save as PNG files.
 
 Run standalone:
     python -m src.preprocessing.batch_process
@@ -13,7 +13,16 @@ from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
 from .preprocess_pipelines import preprocess_im2latex, preprocess_crohme
-from src.utils.constants import *
+from src.utils.constants import (
+    IM2LATEX_IMAGE_PATH,
+    IM2LATEX_TRAIN_CSV,
+    IM2LATEX_VAL_CSV,
+    IM2LATEX_TEST_CSV,
+    IM2LATEX_OUTPUT_PATH,
+    CROHME_IMAGE_PATH,
+    CROHME_CSV_PATH,
+    CROHME_OUTPUT_PATH
+)
 
 def batch_preprocess_and_save(dataset_type='im2latex'):
     """
@@ -27,9 +36,9 @@ def batch_preprocess_and_save(dataset_type='im2latex'):
     """
     if dataset_type == 'im2latex':
         # Process all splits
-        train_df = pd.read_csv(IM2LATEX_LABEL_PATH / "im2latex_train.csv")
-        val_df   = pd.read_csv(IM2LATEX_LABEL_PATH / "im2latex_validate.csv")
-        test_df  = pd.read_csv(IM2LATEX_LABEL_PATH / "im2latex_test.csv")
+        train_df = pd.read_csv(IM2LATEX_TRAIN_CSV)
+        val_df = pd.read_csv(IM2LATEX_VAL_CSV)
+        test_df = pd.read_csv(IM2LATEX_TEST_CSV)
 
         all_dfs = {'train': train_df, 'val': val_df, 'test': test_df}
         base_path = IM2LATEX_IMAGE_PATH
@@ -37,14 +46,20 @@ def batch_preprocess_and_save(dataset_type='im2latex'):
         preprocess_fn = preprocess_im2latex
     else:
         # CROHME - need to split manually
+        if not CROHME_CSV_PATH.exists():
+            raise FileNotFoundError(
+                f"CROHME dataset not found at {CROHME_CSV_PATH}. "
+                "Please run: python -m src.utils.download_data"
+            )
+        
         df = pd.read_csv(CROHME_CSV_PATH)
+        base_path = CROHME_IMAGE_PATH
 
         from sklearn.model_selection import train_test_split
         train_df, temp_df = train_test_split(df, test_size=0.2, random_state=42)
-        val_df, test_df   = train_test_split(temp_df, test_size=0.5, random_state=42)
+        val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
 
         all_dfs = {'train': train_df, 'val': val_df, 'test': test_df}
-        base_path = CROHME_IMAGE_PATH
         output_path = CROHME_OUTPUT_PATH
         preprocess_fn = preprocess_crohme
 
@@ -117,8 +132,8 @@ def batch_preprocess_and_save(dataset_type='im2latex'):
         output_csv = output_path / f"{split_name}.csv"
         valid_df.to_csv(output_csv, index=False)
 
-        print(f"✓ Processed {len(valid_df)} / {len(df)} images")
-        print(f"✓ Saved to: {output_csv}")
+        print(f"[OK] Processed {len(valid_df)} / {len(df)} images")
+        print(f"[OK] Saved to: {output_csv}")
 
         all_dfs[split_name] = valid_df
 
@@ -187,7 +202,7 @@ def main():
     if results:
         for dataset_type, result_dfs in results.items():
             total_images = sum(len(df) for df in result_dfs.values())
-            print(f"✓ {dataset_type.upper()}: {total_images} total images preprocessed")
+            print(f"[OK] {dataset_type.upper()}: {total_images} total images preprocessed")
     else:
         print("No datasets were successfully processed")
     print()

@@ -647,7 +647,9 @@ def analyze_preprocessing_statistics(df, preprocess_fn, dataset_type='im2latex',
 if __name__ == "__main__":
     from .constants import (
         IM2LATEX_IMAGE_PATH,
-        IM2LATEX_LABEL_PATH,
+        IM2LATEX_TRAIN_CSV,
+        IM2LATEX_VAL_CSV,
+        IM2LATEX_TEST_CSV,
         CROHME_IMAGE_PATH,
         CROHME_CSV_PATH
     )
@@ -656,42 +658,76 @@ if __name__ == "__main__":
     print("IMAGE STATISTICS ANALYSIS")
     print("=" * 80)
     
-    # Load datasets
+    # Load datasets - BAT BUOC ca 2
     print("\nLoading datasets...")
     
-    # IM2LATEX
-    im2latex_train = pd.read_csv(IM2LATEX_LABEL_PATH / "im2latex_train.csv")
-    im2latex_val = pd.read_csv(IM2LATEX_LABEL_PATH / "im2latex_validate.csv")
-    im2latex_test = pd.read_csv(IM2LATEX_LABEL_PATH / "im2latex_test.csv")
+    missing_datasets = []
+    
+    # Kiem tra IM2LATEX
+    if not IM2LATEX_TRAIN_CSV.exists():
+        missing_datasets.append(f"IM2LATEX: {IM2LATEX_TRAIN_CSV}")
+    
+    # Kiem tra CROHME
+    if not CROHME_CSV_PATH.exists():
+        missing_datasets.append(f"CROHME: {CROHME_CSV_PATH}")
+    
+    if missing_datasets:
+        print("")
+        print("=" * 70)
+        print("[ERROR] THIEU DATASETS!")
+        print("=" * 70)
+        print("")
+        for ds in missing_datasets:
+            print(f"  - {ds}")
+        print("")
+        print("Vui long chay buoc download truoc:")
+        print("  python -m src.utils.download_data")
+        print("")
+        print("Hoac setup Kaggle credentials va chay pipeline:")
+        print("  ./setup_kaggle.sh YOUR_USERNAME YOUR_API_KEY")
+        print("  ./pipeline.sh")
+        print("")
+        print("=" * 70)
+        exit(1)
+    
+    # Load IM2LATEX
+    im2latex_train = pd.read_csv(IM2LATEX_TRAIN_CSV)
+    im2latex_val = pd.read_csv(IM2LATEX_VAL_CSV)
+    im2latex_test = pd.read_csv(IM2LATEX_TEST_CSV)
     
     im2latex_df = pd.concat([im2latex_train, im2latex_val, im2latex_test], ignore_index=True)
     im2latex_df['dataset'] = 'IM2LATEX'
     im2latex_df['image_path'] = im2latex_df['image'].apply(lambda x: IM2LATEX_IMAGE_PATH / x)
+    print(f"[OK] IM2LATEX: {len(im2latex_df):,} samples")
     
-    # CROHME
+    # Load CROHME
     crohme_df = pd.read_csv(CROHME_CSV_PATH)
     crohme_df['dataset'] = 'CROHME'
     crohme_df['image_path'] = crohme_df['image'].apply(lambda x: CROHME_IMAGE_PATH / x)
-    
-    print(f"✓ IM2LATEX: {len(im2latex_df):,} samples")
-    print(f"✓ CROHME: {len(crohme_df):,} samples")
+    print(f"[OK] CROHME: {len(crohme_df):,} samples")
     
     # Extract dimensions
     print("\nExtracting dimensions...")
+    
+    # IM2LATEX
     im2latex_with_dims = extract_image_dimensions(im2latex_df, sample_size=5000)
-    crohme_with_dims = extract_image_dimensions(crohme_df, sample_size=None)
-    
-    # Clean
     im2latex_clean = im2latex_with_dims.dropna(subset=['width', 'height'])
-    crohme_clean = crohme_with_dims.dropna(subset=['width', 'height'])
     
-    # Print statistics
     print("\n" + "=" * 80)
     print("IM2LATEX DIMENSIONS")
     print("=" * 80)
     print(f"Width  - Mean: {im2latex_clean['width'].mean():.1f}, Median: {im2latex_clean['width'].median():.1f}")
     print(f"Height - Mean: {im2latex_clean['height'].mean():.1f}, Median: {im2latex_clean['height'].median():.1f}")
     print(f"Aspect Ratio - Mean: {im2latex_clean['aspect_ratio'].mean():.2f}")
+    
+    # Pixel intensity IM2LATEX
+    print("\nAnalyzing IM2LATEX pixel intensity...")
+    im2latex_intensity = analyze_pixel_intensity(im2latex_clean, 500, "IM2LATEX")
+    print(f"IM2LATEX - Mean: {im2latex_intensity['mean']:.4f}, Std: {im2latex_intensity['std']:.4f}")
+    
+    # CROHME
+    crohme_with_dims = extract_image_dimensions(crohme_df, sample_size=None)
+    crohme_clean = crohme_with_dims.dropna(subset=['width', 'height'])
     
     print("\n" + "=" * 80)
     print("CROHME DIMENSIONS")
@@ -700,18 +736,12 @@ if __name__ == "__main__":
     print(f"Height - Mean: {crohme_clean['height'].mean():.1f}, Median: {crohme_clean['height'].median():.1f}")
     print(f"Aspect Ratio - Mean: {crohme_clean['aspect_ratio'].mean():.2f}")
     
-    # Pixel intensity
-    print("\nAnalyzing pixel intensity...")
-    im2latex_intensity = analyze_pixel_intensity(im2latex_clean, 500, "IM2LATEX")
+    # Pixel intensity CROHME
+    print("\nAnalyzing CROHME pixel intensity...")
     crohme_intensity = analyze_pixel_intensity(crohme_clean, 500, "CROHME")
-    
-    print("\n" + "=" * 80)
-    print("PIXEL INTENSITY")
-    print("=" * 80)
-    print(f"IM2LATEX - Mean: {im2latex_intensity['mean']:.4f}, Std: {im2latex_intensity['std']:.4f}")
     print(f"CROHME   - Mean: {crohme_intensity['mean']:.4f}, Std: {crohme_intensity['std']:.4f}")
     
-    print("\nAnalysis complete!")
+    print("\n[OK] Analysis complete!")
 
 
 # Export all public functions

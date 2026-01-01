@@ -10,7 +10,11 @@ Run standalone:
 import numpy as np
 import cv2
 from PIL import Image
-from src.utils.constants import *
+from src.utils.constants import (
+    TARGET_HEIGHT,
+    TARGET_WIDTH,
+    PAD_VALUE
+)
 
 def convert_to_grayscale(image):
     """

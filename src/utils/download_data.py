@@ -387,42 +387,42 @@ def main():
     print("="*80)
     
     # Buoc 1: Tai datasets
-    print("\n[STEP 1/3] Download datasets")
+    print("\n[STEP 1/2] Download datasets")
     print("-"*80)
     download_datasets(target_folder="data")
     
+    # Kiem tra IM2LATEX CSVs
+    im2latex_csvs = [
+        "data/IM2LATEX/im2latex_train.csv",
+        "data/IM2LATEX/im2latex_validate.csv", 
+        "data/IM2LATEX/im2latex_test.csv"
+    ]
+    missing_csvs = [f for f in im2latex_csvs if not os.path.exists(f)]
+    if missing_csvs:
+        print(f"[WARNING] IM2LATEX CSVs missing: {missing_csvs}")
+    else:
+        print("[OK] IM2LATEX CSVs verified")
+    
     # Buoc 2: Xu ly CROHME (InkML -> Images)
-    print("\n[STEP 2/3] Process CROHME (InkML -> Images)")
+    print("\n[STEP 2/2] Process CROHME (InkML -> Images)")
     print("-"*80)
     crohme_path = "data/CROHME"
     if os.path.exists(crohme_path):
-        process_crohme_dataset(
+        result = process_crohme_dataset(
             crohme_path=crohme_path,
             output_dir="data/preprocessed/crohme"
-        )
-    else:
-        print(f"[SKIP] CROHME khong ton tai tai {crohme_path}")
-    
-    # Buoc 3: Merge CROHME + IM2LATEX -> final_dataset
-    print("\n[STEP 3/3] Merge datasets -> final_dataset")
-    print("-"*80)
-    im2latex_path = "data/IM2LATEX"
-    if os.path.exists(im2latex_path):
-        merge_result = merge_datasets(
-            crohme_processed_path="data/preprocessed/crohme",
-            im2latex_path=im2latex_path,
-            output_path="data/final_dataset"
         )
         
         print("\n" + "="*80)
         print("HOAN TAT!")
         print("="*80)
-        print(f"Location: {merge_result['output_dir']}")
-        print(f"  Ground truth: {merge_result['ground_truth']} samples")
-        print(f"  Non ground truth: {merge_result['non_ground_truth']} samples")
+        print(f"CROHME processed:")
+        print(f"  Ground truth: {result['ground_truth']} samples")
+        print(f"  Non ground truth: {result['non_ground_truth']} samples")
+        print(f"  Errors: {result['errors']}")
         print("="*80)
     else:
-        print(f"[SKIP] IM2LATEX khong ton tai tai {im2latex_path}")
+        print(f"[SKIP] CROHME khong ton tai tai {crohme_path}")
 
 
 if __name__ == "__main__":

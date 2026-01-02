@@ -28,3 +28,5 @@ processed_data/
 
 # Wandb
 wandb/
+
+models/

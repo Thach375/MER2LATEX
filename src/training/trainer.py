@@ -356,7 +356,10 @@ class Trainer:
             self.optimizer.zero_grad()
             
             # Forward pass with AMP
-            with autocast(enabled=self.use_amp and self.device.type == 'cuda'):
+            # NOTE: CTC Loss does NOT work with AMP (float16) - disable for model_a
+            use_amp_for_forward = self.use_amp and self.device.type == 'cuda' and self.model_name != 'model_a'
+            
+            with autocast(enabled=use_amp_for_forward):
                 if self.model_name == 'model_a':
                     loss = self._compute_ctc_loss(images, labels, lengths)
                 else:
@@ -368,7 +371,8 @@ class Trainer:
                 continue
             
             # Backward pass
-            if self.scaler:
+            # For model_a (CTC), don't use scaler since AMP is disabled
+            if self.scaler and self.model_name != 'model_a':
                 self.scaler.scale(loss).backward()
                 self.scaler.unscale_(self.optimizer)
                 grad_norm = torch.nn.utils.clip_grad_norm_(
@@ -431,18 +435,33 @@ class Trainer:
         T, B, _ = log_probs.shape
         input_lengths = torch.full((B,), T, dtype=torch.long, device=self.device)
         
-        # Remove BOS and EOS for CTC
-        target_lengths = lengths - 2
+        # Remove BOS and EOS for CTC - targets should not include special tokens
+        target_lengths = lengths - 2  # Remove BOS and EOS count
         target_lengths = target_lengths.clamp(min=1)
         
-        targets = labels[:, 1:]  # Remove BOS
+        # CTC REQUIREMENT: input_length >= target_length for each sample
+        # If target is longer than input, we need to truncate
+        target_lengths = torch.minimum(target_lengths, input_lengths)
         
-        # Flatten targets
+        targets = labels[:, 1:]  # Remove BOS (keep content + EOS, but we use target_lengths to limit)
+        
+        # Flatten targets and ensure no blank tokens (0) in targets
         targets_flat = []
         for i in range(B):
-            tgt_len = target_lengths[i].item()
-            targets_flat.append(targets[i, :tgt_len])
+            tgt_len = int(target_lengths[i].item())
+            tgt = targets[i, :tgt_len]
+            # Replace any blank tokens (0) with a valid token (e.g., 1)
+            # CTC blank should not appear in targets
+            tgt = torch.where(tgt == 0, torch.ones_like(tgt), tgt)
+            targets_flat.append(tgt)
+        
+        if len(targets_flat) == 0:
+            return torch.tensor(0.0, device=self.device, requires_grad=True)
+        
         targets_flat = torch.cat(targets_flat)
+        
+        # Ensure targets are within vocab range
+        targets_flat = targets_flat.clamp(min=1, max=self.tokenizer.vocab_size - 1)
         
         loss = self.criterion(log_probs, targets_flat, input_lengths, target_lengths)
         
@@ -488,8 +507,9 @@ class Trainer:
             lengths = batch['lengths'].to(self.device)
             formulas = batch['formulas']
             
-            # Compute loss
-            with autocast(enabled=self.use_amp and self.device.type == 'cuda'):
+            # Compute loss - disable AMP for CTC (model_a)
+            use_amp_for_val = self.use_amp and self.device.type == 'cuda' and self.model_name != 'model_a'
+            with autocast(enabled=use_amp_for_val):
                 if self.model_name == 'model_a':
                     loss = self._compute_ctc_loss(images, labels, lengths)
                 else:

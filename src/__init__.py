@@ -6,7 +6,8 @@ Math Expression Recognition to LaTeX.
 
 from src.models import create_model
 from src.training import train_model, Trainer
-from src.data import MERDataset, get_dataloader, compute_metrics, evaluate_model
+from src.data import MERDataset, get_dataloader
+from src.evaluation import compute_metrics, evaluate_model
 from src.tokenizer.tokenize import LaTeXTokenizer
 
 __all__ = [

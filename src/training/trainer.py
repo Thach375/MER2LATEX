@@ -75,12 +75,12 @@ class Trainer:
         wandb_run_name: Optional[str] = None,
         # Checkpoint settings
         checkpoint_dir: Optional[Path] = None,
-        checkpoint_metric: str = 'val_loss',
-        checkpoint_mode: str = 'min',
+        checkpoint_metric: str = 'val_bleu',  # BLEU tot nhat cho MER
+        checkpoint_mode: str = 'max',  # max vi BLEU cao = tot
         save_best_only: bool = False,
         max_checkpoints: int = 3,
-        # Early stopping
-        early_stopping: bool = True,
+        # Early stopping - mac dinh TAT de train du epochs
+        early_stopping: bool = False,
         patience: int = 5,
         # Other settings
         device: Optional[str] = None,
@@ -696,8 +696,9 @@ def train_model(
     num_epochs: int = NUM_EPOCHS,
     learning_rate: float = LEARNING_RATE,
     use_wandb: bool = True,
-    checkpoint_metric: str = 'val_loss',
-    early_stopping: bool = True,
+    checkpoint_metric: str = 'val_bleu',  # BLEU tot nhat cho MER
+    checkpoint_mode: str = 'max',  # max vi BLEU cao = tot
+    early_stopping: bool = False,  # Mac dinh TAT de train du epochs
     patience: int = 5,
     **kwargs
 ) -> Dict[str, Any]:
@@ -712,15 +713,18 @@ def train_model(
         num_epochs: Number of epochs
         learning_rate: Learning rate
         use_wandb: Enable wandb logging
-        checkpoint_metric: Metric for best checkpoint ('val_loss' or 'bleu')
-        early_stopping: Enable early stopping
+        checkpoint_metric: Metric for best checkpoint (default: 'val_bleu')
+        checkpoint_mode: 'min' for loss, 'max' for bleu/accuracy
+        early_stopping: Enable early stopping (default: False)
         patience: Early stopping patience
         **kwargs: Additional trainer arguments
     
     Returns:
         Training results dictionary
     """
-    checkpoint_mode = 'min' if 'loss' in checkpoint_metric else 'max'
+    # Auto-detect mode if not explicitly set
+    if checkpoint_mode is None:
+        checkpoint_mode = 'min' if 'loss' in checkpoint_metric else 'max'
     
     trainer = Trainer(
         model_name=model_name,
@@ -760,17 +764,20 @@ if __name__ == "__main__":
                        help='Learning rate')
     parser.add_argument('--no-wandb', action='store_true',
                        help='Disable wandb logging')
-    parser.add_argument('--checkpoint-metric', type=str, default='val_loss',
-                       choices=['val_loss', 'bleu', 'exact_match'],
-                       help='Metric for best checkpoint')
-    parser.add_argument('--no-early-stop', action='store_true',
-                       help='Disable early stopping')
+    parser.add_argument('--checkpoint-metric', type=str, default='val_bleu',
+                       choices=['val_loss', 'val_bleu', 'val_exact_match'],
+                       help='Metric for best checkpoint (default: val_bleu)')
+    parser.add_argument('--early-stop', action='store_true',
+                       help='Enable early stopping (default: disabled)')
     parser.add_argument('--patience', type=int, default=5,
-                       help='Early stopping patience')
+                       help='Early stopping patience (only if --early-stop)')
     parser.add_argument('--resume', type=str, default=None,
                        help='Resume from checkpoint')
     
     args = parser.parse_args()
+    
+    # Determine checkpoint mode based on metric
+    checkpoint_mode = 'min' if args.checkpoint_metric == 'val_loss' else 'max'
     
     results = train_model(
         model_name=args.model,
@@ -781,7 +788,8 @@ if __name__ == "__main__":
         learning_rate=args.lr,
         use_wandb=not args.no_wandb,
         checkpoint_metric=args.checkpoint_metric,
-        early_stopping=not args.no_early_stop,
+        checkpoint_mode=checkpoint_mode,
+        early_stopping=args.early_stop,  # Default OFF
         patience=args.patience,
         resume_from=args.resume
     )

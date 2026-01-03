@@ -6,35 +6,39 @@ Deep Learning Project: Image -> LaTeX -> (Optional) SymPy
 
 ```
 /app/
-|-- src/
-|   |-- data/                     # Dataset and evaluation
-|   |   |-- dataset.py            # MERDataset, get_dataloader
-|   |   |-- evaluation.py         # Metrics, error analysis
-|   |-- models/                   # Model architectures
-|   |   |-- components.py         # Encoders, decoders, attention
-|   |   |-- architectures.py      # Model A/B/C/D definitions
-|   |-- training/                 # Training utilities
-|   |   |-- trainer.py            # Main Trainer class
-|   |   |-- callbacks.py          # EarlyStopping, ModelCheckpoint
-|   |-- preprocessing/            # Image preprocessing
-|   |   |-- transforms.py         # Image transforms
-|   |   |-- preprocess_pipelines.py
-|   |   |-- batch_process.py
-|   |-- tokenizer/
-|   |   |-- tokenize.py           # LaTeX tokenizer
-|   |-- utils/
-|   |   |-- constants.py          # Configuration and paths
-|   |   |-- download_data.py      # Download and process datasets
-|   |   |-- analysis.py           # EDA functions
-|-- data/
-|   |-- IM2LATEX/                 # IM2LATEX raw data (from Kaggle)
-|   |-- CROHME/                   # CROHME raw InkML files
-|   |-- preprocessed/             # Processed outputs
-|       |-- crohme/               # CROHME processed images
-|       |-- im2latex/             # IM2LATEX processed images
-|-- checkpoints/                  # Model checkpoints
-|-- logs/                         # Training logs
-|-- pipeline.sh                   # Full pipeline script
+├── src/
+│   ├── data/                     # Dataset loading
+│   │   └── dataset.py            # MERDataset, get_dataloader
+│   ├── models/                   # Model architectures
+│   │   ├── components.py         # Encoders, decoders, attention
+│   │   └── architectures.py      # Model A/B/C/D definitions
+│   ├── training/                 # Training utilities
+│   │   ├── trainer.py            # Main Trainer class
+│   │   └── callbacks.py          # EarlyStopping, ModelCheckpoint
+│   ├── evaluation/               # Evaluation & testing
+│   │   ├── metrics.py            # Metrics, error analysis
+│   │   └── evaluate.py           # Test script (runnable)
+│   ├── preprocessing/            # Image preprocessing
+│   │   ├── transforms.py         # Image transforms
+│   │   ├── preprocess_pipelines.py
+│   │   └── batch_process.py
+│   ├── tokenizer/
+│   │   └── tokenize.py           # LaTeX tokenizer
+│   └── utils/
+│       ├── constants.py          # Configuration and paths
+│       ├── download_data.py      # Download datasets
+│       └── analysis.py           # EDA functions
+├── data/
+│   ├── IM2LATEX/                 # IM2LATEX raw data (from Kaggle)
+│   ├── CROHME/                   # CROHME raw InkML files
+│   └── preprocessed/             # Processed outputs
+│       ├── crohme/               # CROHME processed images
+│       └── im2latex/             # IM2LATEX processed images
+├── checkpoints/                  # Model checkpoints
+├── logs/                         # Training logs
+├── notebooks/                    # Jupyter notebooks for EDA
+├── app/                          # Gradio web demo
+└── pipeline.sh                   # Full pipeline script
 ```
 
 ## Models
@@ -70,6 +74,22 @@ python -m src.training.trainer --model model_a --epochs 30
 python -m src.training.trainer --model model_b --epochs 30
 python -m src.training.trainer --model model_c --epochs 30
 python -m src.training.trainer --model model_d --epochs 30
+```
+
+### 4. Test Trained Model
+```bash
+# Test with best checkpoint in directory
+python -m src.evaluation.evaluate \
+    --checkpoint-dir checkpoints/model_b/20260103_180343 \
+    --model model_b \
+    --dataset im2latex
+
+# Or test with specific checkpoint
+python -m src.evaluation.evaluate \
+    --checkpoint checkpoints/model_b/20260103_180343/best_checkpoint.pt \
+    --model model_b \
+    --dataset im2latex \
+    --save-dir results/model_b_test
 ```
 
 ## Training Options

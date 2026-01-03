@@ -41,7 +41,7 @@ from src.utils.constants import (
 from src.data.dataset import get_dataloader, MERDataset
 from src.models import create_model
 from src.tokenizer.tokenize import LaTeXTokenizer
-from src.data.evaluation import compute_metrics, decode_predictions
+from src.evaluation import compute_metrics, decode_predictions
 from src.training.callbacks import EarlyStopping, ModelCheckpoint, TrainingLogger
 
 

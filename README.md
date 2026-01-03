@@ -145,7 +145,7 @@ results = trainer.train()
 docker-compose build
 
 # Nếu không có GPU:
-docker-compose up -d
+docker-compose --profile cpu up -d
 
 # Nếu có GPU:
 docker-compose --profile gpu up -d

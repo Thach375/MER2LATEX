@@ -23,10 +23,8 @@ RUN mkdir -p data logs
 # 7. Set environment variables
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
-# Cho phep CUDA hoat dong ngay ca khi khong co GPU (se fallback ve CPU)
-ENV CUDA_VISIBLE_DEVICES=""
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+# PyTorch se tu dong detect GPU, neu khong co se dung CPU
+ENV PYTORCH_ENABLE_MPS_FALLBACK=1
 
-# 8. Lenh mac dinh
-CMD ["python", "-c", "import torch; print(f'MER2LaTeX ready! GPU: {torch.cuda.is_available()}')"]
+# 8. Lenh mac dinh - hien thi thong tin device
+CMD ["python", "-c", "import torch; device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'; print(f'MER2LaTeX ready! Device: {device}')"]

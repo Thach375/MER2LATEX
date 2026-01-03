@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
     container_name: mer2latex-container
     volumes:
       - .:/app
@@ -10,15 +13,27 @@ services:
       - ./logs:/app/logs
     environment:
       - PYTHONPATH=/app
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PYTORCH_ENABLE_MPS_FALLBACK=1  # For Mac M1/M2
     networks:
       - mer-network
     ports:
       - "8888:8888"  # Jupyter
       - "7860:7860"  # Gradio app
-    # GPU support - tu dong dung GPU neu co, khong co thi chay CPU
-    # Chi can cai NVIDIA Container Toolkit tren host
+    command: ["tail", "-f", "/dev/null"]
+    shm_size: '8gb'
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # GPU version (Windows/Linux với NVIDIA GPU)
+  mer-app-gpu:
+    extends: mer-app
+    profiles: ["gpu"]
+    container_name: mer2latex-container-gpu
+    environment:
+      - PYTHONPATH=/app
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     deploy:
       resources:
         reservations:
@@ -26,12 +41,6 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    command: ["tail", "-f", "/dev/null"]
-    shm_size: '8gb'
-    restart: unless-stopped
-    # Stdin/tty cho interactive
-    stdin_open: true
-    tty: true
 
 networks:
   mer-network:

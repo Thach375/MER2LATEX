@@ -143,6 +143,11 @@ results = trainer.train()
 
 ```bash
 docker-compose build
+
+# Nếu không có GPU:
 docker-compose up -d
+
+# Nếu có GPU:
+docker-compose --profile gpu up -d
 # Attach VSCode: Ctrl+Shift+P -> Dev Containers: Attach
 ```

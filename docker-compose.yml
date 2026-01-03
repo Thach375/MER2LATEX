@@ -1,23 +1,66 @@
 services:
   mer-app:
+    profiles: ["cpu"]
     build:
       context: .
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
     container_name: mer2latex-container
     volumes:
       - .:/app
       - ./data:/app/data
-      - ./models:/app/models
       - ./logs:/app/logs
     environment:
       - PYTHONPATH=/app
+      - PYTORCH_ENABLE_MPS_FALLBACK=1  # For Mac M1/M2
     networks:
       - mer-network
     ports:
       - "8888:8888"  # Jupyter
       - "7860:7860"  # Gradio app
-    # Giữ container chạy để bạn exec vào giống project cũ
     command: ["tail", "-f", "/dev/null"]
+    shm_size: '8gb'
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # GPU version (Windows/Linux với NVIDIA GPU)
+  mer-app-gpu:
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    container_name: mer2latex-container-gpu
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - mer-network
+    ports:
+      - "8888:8888"  # Jupyter
+      - "7860:7860"  # Gradio app
+    command: ["tail", "-f", "/dev/null"]
+    shm_size: '8gb'
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 networks:
   mer-network:

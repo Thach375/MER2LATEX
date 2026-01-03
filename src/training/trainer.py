@@ -534,7 +534,10 @@ class Trainer:
         avg_loss = total_loss / max(num_batches, 1)
         
         # Compute metrics
-        metrics = compute_metrics(all_predictions, all_targets)
+        base_metrics = compute_metrics(all_predictions, all_targets)
+        
+        # Add 'val_' prefix to all metrics for consistency
+        metrics = {f'val_{k}': v for k, v in base_metrics.items()}
         metrics['val_loss'] = avg_loss
         metrics['val_time'] = val_time
         
@@ -587,9 +590,9 @@ class Trainer:
                 print(f"{'='*40}")
                 print(f"  Train Loss:    {train_metrics['train_loss']:.4f}")
                 print(f"  Val Loss:      {val_metrics['val_loss']:.4f}")
-                print(f"  Exact Match:   {val_metrics['exact_match']:.4f}")
-                print(f"  BLEU:          {val_metrics['bleu']:.4f}")
-                print(f"  Edit Distance: {val_metrics['edit_distance']:.4f}")
+                print(f"  Exact Match:   {val_metrics['val_exact_match']:.4f}")
+                print(f"  BLEU:          {val_metrics['val_bleu']:.4f}")
+                print(f"  Edit Distance: {val_metrics['val_edit_distance']:.4f}")
                 print(f"  Train Time:    {train_metrics['train_time']:.1f}s")
                 print(f"  Val Time:      {val_metrics['val_time']:.1f}s")
                 
@@ -598,10 +601,10 @@ class Trainer:
                     wandb.log({
                         'epoch': epoch + 1,
                         'val/loss': val_metrics['val_loss'],
-                        'val/exact_match': val_metrics['exact_match'],
-                        'val/bleu': val_metrics['bleu'],
-                        'val/edit_distance': val_metrics['edit_distance'],
-                        'val/sympy_equivalence': val_metrics.get('sympy_equivalence', 0),
+                        'val/exact_match': val_metrics['val_exact_match'],
+                        'val/bleu': val_metrics['val_bleu'],
+                        'val/edit_distance': val_metrics['val_edit_distance'],
+                        'val/sympy_equivalence': val_metrics.get('val_sympy_equivalence', 0),
                     })
                 
                 # Update best metrics
@@ -609,8 +612,8 @@ class Trainer:
                     self.best_val_loss = val_metrics['val_loss']
                     self.best_metrics = val_metrics.copy()
                 
-                if val_metrics['bleu'] > self.best_val_bleu:
-                    self.best_val_bleu = val_metrics['bleu']
+                if val_metrics['val_bleu'] > self.best_val_bleu:
+                    self.best_val_bleu = val_metrics['val_bleu']
                 
                 # Save checkpoint
                 ckpt_result = self.checkpoint_callback(

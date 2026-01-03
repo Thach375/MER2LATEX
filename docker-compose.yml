@@ -7,17 +7,31 @@ services:
     volumes:
       - .:/app
       - ./data:/app/data
-      - ./models:/app/models
       - ./logs:/app/logs
     environment:
       - PYTHONPATH=/app
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     networks:
       - mer-network
     ports:
       - "8888:8888"  # Jupyter
       - "7860:7860"  # Gradio app
-    # Giữ container chạy để bạn exec vào giống project cũ
+    # GPU support - tu dong dung GPU neu co, khong co thi chay CPU
+    # Chi can cai NVIDIA Container Toolkit tren host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     command: ["tail", "-f", "/dev/null"]
+    shm_size: '8gb'
+    restart: unless-stopped
+    # Stdin/tty cho interactive
+    stdin_open: true
+    tty: true
 
 networks:
   mer-network:

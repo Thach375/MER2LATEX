@@ -1,5 +1,6 @@
 services:
   mer-app:
+    profiles: ["cpu"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,13 +28,32 @@ services:
 
   # GPU version (Windows/Linux với NVIDIA GPU)
   mer-app-gpu:
-    extends: mer-app
     profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
     container_name: mer2latex-container-gpu
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
     environment:
       - PYTHONPATH=/app
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - mer-network
+    ports:
+      - "8888:8888"  # Jupyter
+      - "7860:7860"  # Gradio app
+    command: ["tail", "-f", "/dev/null"]
+    shm_size: '8gb'
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
     deploy:
       resources:
         reservations:

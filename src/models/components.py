@@ -285,7 +285,8 @@ class AttentionDecoder(nn.Module):
         encoder_out: torch.Tensor,
         targets: Optional[torch.Tensor] = None,
         max_len: int = MAX_SEQ_LENGTH,
-        teacher_forcing_ratio: float = 1.0
+        teacher_forcing_ratio: float = 1.0,
+        bos_id: int = 1
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         B = encoder_out.size(0)
         device = encoder_out.device
@@ -298,7 +299,7 @@ class AttentionDecoder(nn.Module):
         outputs = []
         attention_weights_all = []
         
-        current_token = torch.ones(B, dtype=torch.long, device=device)  # BOS token
+        current_token = torch.full((B,), bos_id, dtype=torch.long, device=device)
         
         for t in range(max_len):
             logits, h, c, att_weights = self.forward_step(current_token, h, c, encoder_out)

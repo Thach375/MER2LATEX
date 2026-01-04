@@ -4,9 +4,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      platforms:
-        - linux/amd64
-        - linux/arm64
     container_name: mer2latex-container
     volumes:
       - .:/app
@@ -32,9 +29,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      platforms:
-        - linux/amd64
-        - linux/arm64
     container_name: mer2latex-container-gpu
     volumes:
       - .:/app

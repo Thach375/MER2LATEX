@@ -87,6 +87,7 @@ class Trainer:
         use_amp: bool = True,
         num_workers: int = 4,
         resume_from: Optional[str] = None,
+        finetune: bool = False,  # If True, only load weights, reset epoch/optimizer
         seed: int = 42
     ):
         """
@@ -115,6 +116,7 @@ class Trainer:
             use_amp: Use automatic mixed precision
             num_workers: Number of data loading workers
             resume_from: Path to checkpoint to resume from
+            finetune: If True, only load model weights (for finetuning on new dataset)
             seed: Random seed
         """
         # Set seed
@@ -195,9 +197,10 @@ class Trainer:
         self.best_val_bleu = 0.0
         self.best_metrics = {}
         
-        # Resume from checkpoint
+        # Resume from checkpoint or finetune
+        self.finetune = finetune
         if resume_from:
-            self.load_checkpoint(resume_from)
+            self.load_checkpoint(resume_from, finetune_only=finetune)
         
         # Initialize wandb
         if self.use_wandb:
@@ -688,27 +691,41 @@ class Trainer:
         torch.save(checkpoint, path)
         print(f"[INFO] Saved checkpoint: {path}")
     
-    def load_checkpoint(self, checkpoint_path: str):
-        """Load checkpoint."""
+    def load_checkpoint(self, checkpoint_path: str, finetune_only: bool = False):
+        """
+        Load checkpoint.
+        
+        Args:
+            checkpoint_path: Path to checkpoint file
+            finetune_only: If True, only load model weights (for finetuning on new dataset).
+                          Epoch counter resets to 0, optimizer/scheduler are fresh.
+        """
         print(f"[INFO] Loading checkpoint: {checkpoint_path}")
         
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         
+        # Always load model weights
         self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         
-        if 'scheduler_state_dict' in checkpoint and checkpoint['scheduler_state_dict']:
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        
-        self.current_epoch = checkpoint.get('epoch', 0) + 1
-        self.global_step = checkpoint.get('global_step', 0)
-        self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
-        self.best_metrics = checkpoint.get('best_metrics', {})
-        
-        if self.scaler and 'scaler_state_dict' in checkpoint:
-            self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
-        
-        print(f"[INFO] Resumed from epoch {self.current_epoch}")
+        if finetune_only:
+            # Finetune mode: only load weights, start fresh
+            print(f"[INFO] Finetune mode: loaded weights only, starting from epoch 0")
+        else:
+            # Resume mode: restore full training state
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+            if 'scheduler_state_dict' in checkpoint and checkpoint['scheduler_state_dict']:
+                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            
+            self.current_epoch = checkpoint.get('epoch', 0) + 1
+            self.global_step = checkpoint.get('global_step', 0)
+            self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+            self.best_metrics = checkpoint.get('best_metrics', {})
+            
+            if self.scaler and 'scaler_state_dict' in checkpoint:
+                self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
+            
+            print(f"[INFO] Resumed from epoch {self.current_epoch}")
 
 
 def train_model(
@@ -795,12 +812,18 @@ if __name__ == "__main__":
     parser.add_argument('--patience', type=int, default=5,
                        help='Early stopping patience (only if --early-stop)')
     parser.add_argument('--resume', type=str, default=None,
-                       help='Resume from checkpoint')
+                       help='Resume training from checkpoint (continues epoch count)')
+    parser.add_argument('--finetune', type=str, default=None,
+                       help='Finetune from checkpoint (resets epoch to 0, loads weights only)')
     
     args = parser.parse_args()
     
     # Determine checkpoint mode based on metric
     checkpoint_mode = 'min' if args.checkpoint_metric == 'val_loss' else 'max'
+    
+    # Handle resume vs finetune
+    resume_from = args.resume or args.finetune
+    is_finetune = args.finetune is not None
     
     results = train_model(
         model_name=args.model,
@@ -814,7 +837,8 @@ if __name__ == "__main__":
         checkpoint_mode=checkpoint_mode,
         early_stopping=args.early_stop,  # Default OFF
         patience=args.patience,
-        resume_from=args.resume
+        resume_from=resume_from,
+        finetune=is_finetune
     )
     
     print("\n" + "="*60)

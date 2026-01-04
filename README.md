@@ -76,20 +76,27 @@ python -m src.training.trainer --model model_c --epochs 30
 python -m src.training.trainer --model model_d --epochs 30
 ```
 
-### 4. Test Trained Model
+### 4. Evaluate Trained Model
 ```bash
-# Test with best checkpoint in directory
+# Evaluate on single dataset
 python -m src.evaluation.evaluate \
-    --checkpoint-dir checkpoints/model_b/20260103_180343 \
-    --model model_b \
-    --dataset im2latex
-
-# Or test with specific checkpoint
-python -m src.evaluation.evaluate \
-    --checkpoint checkpoints/model_b/20260103_180343/best_checkpoint.pt \
-    --model model_b \
+    --checkpoint checkpoints/model_a/.../best.pt \
+    --model model_a \
     --dataset im2latex \
-    --save-dir results/model_b_test
+    --tag baseline
+
+# Evaluate on both datasets
+python -m src.evaluation.evaluate \
+    --checkpoint checkpoints/model_a/.../best.pt \
+    --model model_a \
+    --dataset all \
+    --tag baseline
+
+# View comparison table
+python -m src.evaluation.evaluate --show-results
+
+# Clear results
+python -m src.evaluation.evaluate --clear-results
 ```
 
 ## Training Options

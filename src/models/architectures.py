@@ -145,6 +145,7 @@ class ModelB_Attention(nn.Module):
         self,
         images: torch.Tensor,
         max_len: int = MAX_SEQ_LENGTH,
+        bos_id: int = 1,
         eos_id: int = 2
     ) -> torch.Tensor:
         """Greedy decoding for inference."""
@@ -156,7 +157,7 @@ class ModelB_Attention(nn.Module):
             device = images.device
             
             h, c = self.decoder.init_hidden(encoder_out)
-            current_token = torch.ones(B, dtype=torch.long, device=device)
+            current_token = torch.full((B,), bos_id, dtype=torch.long, device=device)
             
             predictions = []
             for _ in range(max_len):

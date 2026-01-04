@@ -1,0 +1,22 @@
+[
+  {
+    "model": "model_a",
+    "dataset": "im2latex",
+    "tag": "baseline",
+    "epoch": 16,
+    "bleu": 0.9948584414934561,
+    "exact_match": 0.20038628681796233,
+    "edit_distance": 0.14658898325925265,
+    "time": "2026-01-04 15:55"
+  },
+  {
+    "model": "model_a",
+    "dataset": "crohme",
+    "tag": "baseline",
+    "epoch": 16,
+    "bleu": 0.35438992634877103,
+    "exact_match": 0.0,
+    "edit_distance": 0.8861345653443945,
+    "time": "2026-01-04 15:55"
+  }
+]

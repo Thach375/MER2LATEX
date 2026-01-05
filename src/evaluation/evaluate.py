@@ -73,6 +73,81 @@ def show_results():
     print("="*95)
 
 
+def infer_model_config_from_checkpoint(checkpoint: dict, model_name: str) -> dict:
+    """
+    Infer model configuration from checkpoint state dict.
+    This allows loading old checkpoints with different architectures.
+    """
+    state_dict = checkpoint.get('model_state_dict', checkpoint)
+    config = {
+        'pretrained': False,  # Don't need pretrained when loading checkpoint
+    }
+    
+    if model_name == 'model_b':
+        # Detect hidden_dim from encoder projection
+        if 'encoder.proj.weight' in state_dict:
+            config['hidden_dim'] = state_dict['encoder.proj.weight'].shape[0]
+        else:
+            config['hidden_dim'] = 256
+        
+        # Detect attention_dim from attention layers
+        if 'decoder.attention.encoder_att.weight' in state_dict:
+            config['attention_dim'] = state_dict['decoder.attention.encoder_att.weight'].shape[0]
+        else:
+            config['attention_dim'] = 256
+        
+        # Detect if coverage is used
+        config['use_coverage'] = 'decoder.attention.coverage_att.weight' in state_dict
+        
+        # Detect embed_dim from embedding
+        if 'decoder.embedding.weight' in state_dict:
+            config['embed_dim'] = state_dict['decoder.embedding.weight'].shape[1]
+        else:
+            config['embed_dim'] = 256
+        
+        # Detect dropout (default, can't infer from weights)
+        config['dropout'] = 0.1
+        
+    elif model_name == 'model_c':
+        # Detect hidden_dim
+        if 'decoder.embedding.weight' in state_dict:
+            config['hidden_dim'] = state_dict['decoder.embedding.weight'].shape[1]
+        else:
+            config['hidden_dim'] = 256
+        
+        # Count decoder layers
+        layer_count = 0
+        for key in state_dict.keys():
+            if 'decoder.transformer_decoder.layers.' in key:
+                layer_idx = int(key.split('.')[3])
+                layer_count = max(layer_count, layer_idx + 1)
+        config['num_decoder_layers'] = layer_count if layer_count > 0 else 4
+        
+        # Detect ff_dim from feedforward layers
+        for key in state_dict.keys():
+            if 'linear1.weight' in key and 'decoder' in key:
+                config['ff_dim'] = state_dict[key].shape[0]
+                break
+        else:
+            config['ff_dim'] = 1024
+        
+        config['num_heads'] = 8
+        config['dropout'] = 0.1
+    
+    elif model_name == 'model_d':
+        if 'decoder.embedding.weight' in state_dict:
+            config['hidden_dim'] = state_dict['decoder.embedding.weight'].shape[1]
+        else:
+            config['hidden_dim'] = 256
+        config['dropout'] = 0.1
+    
+    else:  # model_a
+        config['hidden_dim'] = 256
+        config['dropout'] = 0.1
+    
+    return config
+
+
 def main():
     parser = argparse.ArgumentParser(description='Evaluate MER2LATEX model')
     parser.add_argument('--checkpoint', type=str, help='Path to checkpoint')
@@ -105,10 +180,14 @@ def main():
     print(f"Loading checkpoint: {args.checkpoint}")
     checkpoint = torch.load(args.checkpoint, map_location=device)
     epoch = checkpoint.get('epoch', '?')
+    vocab_size = checkpoint.get('vocab_size', 500)
     
-    # Create model
-    model = create_model(args.model, vocab_size=checkpoint.get('vocab_size', 500), 
-                        hidden_dim=256, dropout=0.1, pretrained=False)
+    # Infer model config from checkpoint to handle different architectures
+    model_config = infer_model_config_from_checkpoint(checkpoint, args.model)
+    print(f"Inferred model config: {model_config}")
+    
+    # Create model with inferred config
+    model = create_model(args.model, vocab_size=vocab_size, **model_config)
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.to(device)
     model.eval()

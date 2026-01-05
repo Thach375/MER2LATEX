@@ -240,10 +240,36 @@ class Trainer:
         """Setup model."""
         print(f"[INFO] Setting up model: {self.model_name}")
         
-        model_kwargs = {
-            'hidden_dim': 256,
-            'dropout': 0.1,
-        }
+        # Model-specific configurations optimized for 100k data
+        if self.model_name == 'model_b':
+            model_kwargs = {
+                'hidden_dim': 512,        # Increased capacity
+                'embed_dim': 256,
+                'attention_dim': 512,
+                'dropout': 0.3,           # Higher dropout
+                'use_coverage': True,     # Prevent repetition
+            }
+        elif self.model_name == 'model_c':
+            model_kwargs = {
+                'hidden_dim': 256,
+                'num_decoder_layers': 3,  # Reduced for 100k data
+                'num_heads': 8,
+                'ff_dim': 512,            # Reduced
+                'dropout': 0.2,
+            }
+        elif self.model_name == 'model_d':
+            model_kwargs = {
+                'hidden_dim': 256,
+                'num_decoder_layers': 4,
+                'num_heads': 8,
+                'ff_dim': 1024,
+                'dropout': 0.1,
+            }
+        else:
+            model_kwargs = {
+                'hidden_dim': 256,
+                'dropout': 0.1,
+            }
         
         if self.model_name in ['model_b', 'model_c', 'model_d']:
             model_kwargs['pretrained'] = True
@@ -287,9 +313,14 @@ class Trainer:
         if self.model_name == 'model_a':
             self.criterion = nn.CTCLoss(blank=self.tokenizer.pad_id, zero_infinity=True)
         else:
+            # Higher label smoothing for seq2seq models to reduce overconfidence
+            smoothing = self.label_smoothing
+            if self.model_name in ['model_b', 'model_c'] and smoothing < 0.15:
+                smoothing = 0.15  # Minimum smoothing for these models
+            
             self.criterion = nn.CrossEntropyLoss(
                 ignore_index=self.tokenizer.pad_id,
-                label_smoothing=self.label_smoothing
+                label_smoothing=smoothing
             )
     
     def _init_wandb(self, run_name: Optional[str] = None):
@@ -480,7 +511,9 @@ class Trainer:
         targets = labels[:, 1:]
         
         if self.model_name == 'model_b':
-            tf_ratio = max(0.5, 1.0 - self.current_epoch / self.num_epochs)
+            # Aggressive scheduled sampling: start at 1.0, decrease to 0.2
+            # This helps reduce exposure bias significantly
+            tf_ratio = max(0.2, 1.0 - 1.5 * self.current_epoch / self.num_epochs)
             outputs, _ = self.model(images, decoder_input, teacher_forcing_ratio=tf_ratio)
         else:
             outputs = self.model(images, decoder_input)

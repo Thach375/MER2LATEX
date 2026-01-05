@@ -101,16 +101,20 @@ class ModelB_Attention(nn.Module):
     """
     Model B: ResNet Encoder + Attention Decoder
     Seq2Seq model with Bahdanau attention.
+    - Coverage mechanism to prevent repetition
+    - Higher capacity (hidden_dim, attention_dim)
+    - Higher dropout for regularization
     """
     
     def __init__(
         self,
         vocab_size: int,
-        hidden_dim: int = 256,
+        hidden_dim: int = 512,        # Increased for better capacity
         embed_dim: int = 256,
-        attention_dim: int = 256,
-        dropout: float = 0.1,
+        attention_dim: int = 512,     # Increased attention capacity
+        dropout: float = 0.3,         # Higher dropout to reduce overfitting
         pretrained: bool = True,
+        use_coverage: bool = True,    # Coverage to prevent repetition
         **kwargs
     ):
         super().__init__()
@@ -122,10 +126,12 @@ class ModelB_Attention(nn.Module):
             hidden_dim=hidden_dim,
             encoder_dim=hidden_dim,
             attention_dim=attention_dim,
-            dropout=dropout
+            dropout=dropout,
+            use_coverage=use_coverage
         )
         
         self.vocab_size = vocab_size
+        self.use_coverage = use_coverage
     
     def forward(
         self,
@@ -148,20 +154,32 @@ class ModelB_Attention(nn.Module):
         bos_id: int = 1,
         eos_id: int = 2
     ) -> torch.Tensor:
-        """Greedy decoding for inference."""
+        """Greedy decoding for inference with coverage."""
         self.eval()
         with torch.no_grad():
             encoder_out = self.encoder(images)
             
             B = images.size(0)
+            T = encoder_out.size(1)
             device = images.device
             
             h, c = self.decoder.init_hidden(encoder_out)
             current_token = torch.full((B,), bos_id, dtype=torch.long, device=device)
             
+            # Initialize coverage vector (check hasattr for backward compatibility)
+            use_cov = getattr(self, 'use_coverage', False)
+            coverage = torch.zeros(B, T, device=device) if use_cov else None
+            
             predictions = []
             for _ in range(max_len):
-                logits, h, c, _ = self.decoder.forward_step(current_token, h, c, encoder_out)
+                logits, h, c, attn_weights = self.decoder.forward_step(
+                    current_token, h, c, encoder_out, coverage
+                )
+                
+                # Update coverage
+                if coverage is not None:
+                    coverage = coverage + attn_weights
+                
                 current_token = logits.argmax(dim=1)
                 predictions.append(current_token)
                 
@@ -181,16 +199,19 @@ class ModelC_Transformer(nn.Module):
     """
     Model C: ViT Encoder + Transformer Decoder
     Full transformer-based model.
+    - Reduced model size to prevent overfitting
+    - Higher dropout for regularization
+    - Nucleus sampling option for diverse outputs
     """
     
     def __init__(
         self,
         vocab_size: int,
         hidden_dim: int = 256,
-        num_decoder_layers: int = 4,
+        num_decoder_layers: int = 3,   # Reduced from 4 for 100k data
         num_heads: int = 8,
-        ff_dim: int = 1024,
-        dropout: float = 0.1,
+        ff_dim: int = 512,             # Reduced from 1024
+        dropout: float = 0.2,          # Increased dropout
         pretrained: bool = True,
         **kwargs
     ):
@@ -207,6 +228,7 @@ class ModelC_Transformer(nn.Module):
         )
         
         self.vocab_size = vocab_size
+        self.hidden_dim = hidden_dim
     
     def forward(
         self,
@@ -223,7 +245,8 @@ class ModelC_Transformer(nn.Module):
         images: torch.Tensor,
         max_len: int = MAX_SEQ_LENGTH,
         bos_id: int = 1,
-        eos_id: int = 2
+        eos_id: int = 2,
+        temperature: float = 1.0
     ) -> torch.Tensor:
         """Greedy decoding for inference."""
         self.eval()
@@ -237,7 +260,8 @@ class ModelC_Transformer(nn.Module):
         
         for _ in range(max_len - 1):
             logits = self.decoder(encoder_out, generated)
-            next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
+            next_logits = logits[:, -1, :] / temperature
+            next_token = next_logits.argmax(dim=-1, keepdim=True)
             generated = torch.cat([generated, next_token], dim=1)
             
             if (next_token.squeeze(-1) == eos_id).all():

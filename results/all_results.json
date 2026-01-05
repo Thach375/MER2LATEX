@@ -87,9 +87,19 @@
     "bleu": 0.3652607026102248,
     "exact_match": 0.0,
     "edit_distance": 0.6717172797611736,
-    "time": "2026-01-05 14:43"
+    "time": "2026-01-05 16:17"
   },
   {
+    "model": "model_b",
+    "dataset": "crohme",
+    "tag": "baseline",
+    "epoch": 21,
+    "bleu": 0.10508033364916466,
+    "exact_match": 0.0,
+    "edit_distance": 0.9578352157748626,
+    "time": "2026-01-05 16:18"
+  },
+    {
     "model": "model_b",
     "dataset": "crohme",
     "tag": "finetuned",

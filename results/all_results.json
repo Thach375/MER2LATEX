@@ -58,5 +58,25 @@
     "exact_match": 0.0,
     "edit_distance": 0.9753405866497601,
     "time": "2026-01-05 13:16"
+  },
+  {
+    "model": "model_c",
+    "dataset": "im2latex",
+    "tag": "finetuned",
+    "epoch": 3,
+    "bleu": 0.8884577617554525,
+    "exact_match": 0.016706904876871077,
+    "edit_distance": 0.5603320950394625,
+    "time": "2026-01-05 14:53"
+  },
+  {
+    "model": "model_c",
+    "dataset": "crohme",
+    "tag": "finetuned",
+    "epoch": 3,
+    "bleu": 0.504312029335347,
+    "exact_match": 0.0010604453870625664,
+    "edit_distance": 0.7979195038525971,
+    "time": "2026-01-05 14:56"
   }
 ]

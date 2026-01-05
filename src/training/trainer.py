@@ -87,6 +87,7 @@ class Trainer:
         use_amp: bool = True,
         num_workers: int = 4,
         resume_from: Optional[str] = None,
+        finetune: bool = False,  # If True, only load weights, reset epoch/optimizer
         seed: int = 42
     ):
         """
@@ -115,6 +116,7 @@ class Trainer:
             use_amp: Use automatic mixed precision
             num_workers: Number of data loading workers
             resume_from: Path to checkpoint to resume from
+            finetune: If True, only load model weights (for finetuning on new dataset)
             seed: Random seed
         """
         # Set seed
@@ -195,9 +197,10 @@ class Trainer:
         self.best_val_bleu = 0.0
         self.best_metrics = {}
         
-        # Resume from checkpoint
+        # Resume from checkpoint or finetune
+        self.finetune = finetune
         if resume_from:
-            self.load_checkpoint(resume_from)
+            self.load_checkpoint(resume_from, finetune_only=finetune)
         
         # Initialize wandb
         if self.use_wandb:
@@ -237,10 +240,36 @@ class Trainer:
         """Setup model."""
         print(f"[INFO] Setting up model: {self.model_name}")
         
-        model_kwargs = {
-            'hidden_dim': 256,
-            'dropout': 0.1,
-        }
+        # Model-specific configurations optimized for 100k data
+        if self.model_name == 'model_b':
+            model_kwargs = {
+                'hidden_dim': 512,        # Increased capacity
+                'embed_dim': 256,
+                'attention_dim': 512,
+                'dropout': 0.3,           # Higher dropout
+                'use_coverage': True,     # Prevent repetition
+            }
+        elif self.model_name == 'model_c':
+            model_kwargs = {
+                'hidden_dim': 256,
+                'num_decoder_layers': 3,  # Reduced for 100k data
+                'num_heads': 8,
+                'ff_dim': 512,            # Reduced
+                'dropout': 0.2,
+            }
+        elif self.model_name == 'model_d':
+            model_kwargs = {
+                'hidden_dim': 256,
+                'num_decoder_layers': 4,
+                'num_heads': 8,
+                'ff_dim': 1024,
+                'dropout': 0.1,
+            }
+        else:
+            model_kwargs = {
+                'hidden_dim': 256,
+                'dropout': 0.1,
+            }
         
         if self.model_name in ['model_b', 'model_c', 'model_d']:
             model_kwargs['pretrained'] = True
@@ -284,9 +313,14 @@ class Trainer:
         if self.model_name == 'model_a':
             self.criterion = nn.CTCLoss(blank=self.tokenizer.pad_id, zero_infinity=True)
         else:
+            # Higher label smoothing for seq2seq models to reduce overconfidence
+            smoothing = self.label_smoothing
+            if self.model_name in ['model_b', 'model_c'] and smoothing < 0.15:
+                smoothing = 0.15  # Minimum smoothing for these models
+            
             self.criterion = nn.CrossEntropyLoss(
                 ignore_index=self.tokenizer.pad_id,
-                label_smoothing=self.label_smoothing
+                label_smoothing=smoothing
             )
     
     def _init_wandb(self, run_name: Optional[str] = None):
@@ -477,7 +511,9 @@ class Trainer:
         targets = labels[:, 1:]
         
         if self.model_name == 'model_b':
-            tf_ratio = max(0.5, 1.0 - self.current_epoch / self.num_epochs)
+            # Aggressive scheduled sampling: start at 1.0, decrease to 0.2
+            # This helps reduce exposure bias significantly
+            tf_ratio = max(0.2, 1.0 - 1.5 * self.current_epoch / self.num_epochs)
             outputs, _ = self.model(images, decoder_input, teacher_forcing_ratio=tf_ratio)
         else:
             outputs = self.model(images, decoder_input)
@@ -688,27 +724,41 @@ class Trainer:
         torch.save(checkpoint, path)
         print(f"[INFO] Saved checkpoint: {path}")
     
-    def load_checkpoint(self, checkpoint_path: str):
-        """Load checkpoint."""
+    def load_checkpoint(self, checkpoint_path: str, finetune_only: bool = False):
+        """
+        Load checkpoint.
+        
+        Args:
+            checkpoint_path: Path to checkpoint file
+            finetune_only: If True, only load model weights (for finetuning on new dataset).
+                          Epoch counter resets to 0, optimizer/scheduler are fresh.
+        """
         print(f"[INFO] Loading checkpoint: {checkpoint_path}")
         
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         
+        # Always load model weights
         self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         
-        if 'scheduler_state_dict' in checkpoint and checkpoint['scheduler_state_dict']:
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        
-        self.current_epoch = checkpoint.get('epoch', 0) + 1
-        self.global_step = checkpoint.get('global_step', 0)
-        self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
-        self.best_metrics = checkpoint.get('best_metrics', {})
-        
-        if self.scaler and 'scaler_state_dict' in checkpoint:
-            self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
-        
-        print(f"[INFO] Resumed from epoch {self.current_epoch}")
+        if finetune_only:
+            # Finetune mode: only load weights, start fresh
+            print(f"[INFO] Finetune mode: loaded weights only, starting from epoch 0")
+        else:
+            # Resume mode: restore full training state
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+            if 'scheduler_state_dict' in checkpoint and checkpoint['scheduler_state_dict']:
+                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            
+            self.current_epoch = checkpoint.get('epoch', 0) + 1
+            self.global_step = checkpoint.get('global_step', 0)
+            self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+            self.best_metrics = checkpoint.get('best_metrics', {})
+            
+            if self.scaler and 'scaler_state_dict' in checkpoint:
+                self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
+            
+            print(f"[INFO] Resumed from epoch {self.current_epoch}")
 
 
 def train_model(
@@ -795,12 +845,18 @@ if __name__ == "__main__":
     parser.add_argument('--patience', type=int, default=5,
                        help='Early stopping patience (only if --early-stop)')
     parser.add_argument('--resume', type=str, default=None,
-                       help='Resume from checkpoint')
+                       help='Resume training from checkpoint (continues epoch count)')
+    parser.add_argument('--finetune', type=str, default=None,
+                       help='Finetune from checkpoint (resets epoch to 0, loads weights only)')
     
     args = parser.parse_args()
     
     # Determine checkpoint mode based on metric
     checkpoint_mode = 'min' if args.checkpoint_metric == 'val_loss' else 'max'
+    
+    # Handle resume vs finetune
+    resume_from = args.resume or args.finetune
+    is_finetune = args.finetune is not None
     
     results = train_model(
         model_name=args.model,
@@ -814,7 +870,8 @@ if __name__ == "__main__":
         checkpoint_mode=checkpoint_mode,
         early_stopping=args.early_stop,  # Default OFF
         patience=args.patience,
-        resume_from=args.resume
+        resume_from=resume_from,
+        finetune=is_finetune
     )
     
     print("\n" + "="*60)

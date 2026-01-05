@@ -1,0 +1,112 @@
+[
+  {
+    "model": "model_a",
+    "dataset": "im2latex",
+    "tag": "baseline",
+    "epoch": 16,
+    "bleu": 0.9948584414934561,
+    "exact_match": 0.20038628681796233,
+    "edit_distance": 0.14658898325925265,
+    "time": "2026-01-04 15:55"
+  },
+  {
+    "model": "model_a",
+    "dataset": "crohme",
+    "tag": "baseline",
+    "epoch": 16,
+    "bleu": 0.35438992634877103,
+    "exact_match": 0.0,
+    "edit_distance": 0.8861345653443945,
+    "time": "2026-01-04 15:55"
+  },
+  {
+    "model": "model_a",
+    "dataset": "im2latex",
+    "tag": "finetuned",
+    "epoch": 1,
+    "bleu": 0.9696241702756753,
+    "exact_match": 0.08102366006760019,
+    "edit_distance": 0.2128354772748069,
+    "time": "2026-01-04 18:47"
+  },
+  {
+    "model": "model_a",
+    "dataset": "crohme",
+    "tag": "finetuned",
+    "epoch": 1,
+    "bleu": 0.49852287898736813,
+    "exact_match": 0.0,
+    "edit_distance": 0.9363708904443188,
+    "time": "2026-01-04 18:47"
+  },
+  {
+    "model": "model_c",
+    "dataset": "im2latex",
+    "tag": "baseline",
+    "epoch": 13,
+    "bleu": 0.6454937953698018,
+    "exact_match": 0.008208594881699663,
+    "edit_distance": 0.5911728659695902,
+    "time": "2026-01-05 13:13"
+  },
+  {
+    "model": "model_c",
+    "dataset": "crohme",
+    "tag": "baseline",
+    "epoch": 13,
+    "bleu": 0.03993408409064095,
+    "exact_match": 0.0,
+    "edit_distance": 0.9753405866497601,
+    "time": "2026-01-05 13:16"
+  },
+  {
+    "model": "model_c",
+    "dataset": "im2latex",
+    "tag": "finetuned",
+    "epoch": 3,
+    "bleu": 0.8884577617554525,
+    "exact_match": 0.016706904876871077,
+    "edit_distance": 0.5603320950394625,
+    "time": "2026-01-05 14:53"
+  },
+  {
+    "model": "model_c",
+    "dataset": "crohme",
+    "tag": "finetuned",
+    "epoch": 3,
+    "bleu": 0.504312029335347,
+    "exact_match": 0.0010604453870625664,
+    "edit_distance": 0.7979195038525971,
+    "time": "2026-01-05 14:56"
+  },
+  {
+    "model": "model_b",
+    "dataset": "im2latex",
+    "tag": "baseline",
+    "epoch": 21,
+    "bleu": 0.3652607026102248,
+    "exact_match": 0.0,
+    "edit_distance": 0.6717172797611736,
+    "time": "2026-01-05 16:17"
+  },
+  {
+    "model": "model_b",
+    "dataset": "crohme",
+    "tag": "baseline",
+    "epoch": 21,
+    "bleu": 0.10508033364916466,
+    "exact_match": 0.0,
+    "edit_distance": 0.9578352157748626,
+    "time": "2026-01-05 16:18"
+  },
+    {
+    "model": "model_b",
+    "dataset": "crohme",
+    "tag": "finetuned",
+    "epoch": 2,
+    "bleu": 0.3858873882764439,
+    "exact_match": 0.0,
+    "edit_distance": 0.8800206173546123,
+    "time": "2026-01-05 14:45"
+  }
+]

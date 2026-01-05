@@ -197,24 +197,43 @@ class ViTEncoder(nn.Module):
 # ============================================================================
 
 class BahdanauAttention(nn.Module):
-    """Bahdanau (additive) attention mechanism."""
+    """Bahdanau (additive) attention mechanism with optional coverage."""
     
-    def __init__(self, encoder_dim: int, decoder_dim: int, attention_dim: int):
+    def __init__(
+        self,
+        encoder_dim: int,
+        decoder_dim: int,
+        attention_dim: int,
+        use_coverage: bool = False
+    ):
         super().__init__()
         
         self.encoder_att = nn.Linear(encoder_dim, attention_dim)
         self.decoder_att = nn.Linear(decoder_dim, attention_dim)
         self.full_att = nn.Linear(attention_dim, 1)
+        
+        self.use_coverage = use_coverage
+        if use_coverage:
+            # Coverage feature: prevents attending to same positions repeatedly
+            self.coverage_att = nn.Linear(1, attention_dim, bias=False)
     
     def forward(
         self,
         encoder_out: torch.Tensor,
-        decoder_hidden: torch.Tensor
+        decoder_hidden: torch.Tensor,
+        coverage: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         att1 = self.encoder_att(encoder_out)  # (B, T, att_dim)
         att2 = self.decoder_att(decoder_hidden).unsqueeze(1)  # (B, 1, att_dim)
         
-        att = torch.tanh(att1 + att2)  # (B, T, att_dim)
+        att = att1 + att2
+        
+        # Add coverage features if enabled (check hasattr for backward compatibility)
+        if getattr(self, 'use_coverage', False) and coverage is not None:
+            coverage_feat = self.coverage_att(coverage.unsqueeze(2))  # (B, T, att_dim)
+            att = att + coverage_feat
+        
+        att = torch.tanh(att)  # (B, T, att_dim)
         scores = self.full_att(att).squeeze(2)  # (B, T)
         
         attention_weights = F.softmax(scores, dim=1)  # (B, T)
@@ -228,7 +247,7 @@ class BahdanauAttention(nn.Module):
 # ============================================================================
 
 class AttentionDecoder(nn.Module):
-    """LSTM decoder with attention (for Model B)."""
+    """LSTM decoder with attention and optional coverage (for Model B)."""
     
     def __init__(
         self,
@@ -237,16 +256,20 @@ class AttentionDecoder(nn.Module):
         hidden_dim: int = 256,
         encoder_dim: int = 256,
         attention_dim: int = 256,
-        dropout: float = 0.1
+        dropout: float = 0.1,
+        use_coverage: bool = False
     ):
         super().__init__()
         
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
         self.hidden_dim = hidden_dim
+        self.use_coverage = use_coverage
         
         self.embedding = nn.Embedding(vocab_size, embed_dim)
-        self.attention = BahdanauAttention(encoder_dim, hidden_dim, attention_dim)
+        self.attention = BahdanauAttention(
+            encoder_dim, hidden_dim, attention_dim, use_coverage=use_coverage
+        )
         
         self.lstm_cell = nn.LSTMCell(embed_dim + encoder_dim, hidden_dim)
         self.fc = nn.Linear(hidden_dim, vocab_size)
@@ -266,12 +289,13 @@ class AttentionDecoder(nn.Module):
         token: torch.Tensor,
         h: torch.Tensor,
         c: torch.Tensor,
-        encoder_out: torch.Tensor
+        encoder_out: torch.Tensor,
+        coverage: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         embed = self.embedding(token)
         embed = self.dropout(embed)
         
-        context, attention_weights = self.attention(encoder_out, h)
+        context, attention_weights = self.attention(encoder_out, h, coverage)
         
         lstm_input = torch.cat([embed, context], dim=1)
         h, c = self.lstm_cell(lstm_input, (h, c))
@@ -289,6 +313,7 @@ class AttentionDecoder(nn.Module):
         bos_id: int = 1
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         B = encoder_out.size(0)
+        T = encoder_out.size(1)
         device = encoder_out.device
         
         if targets is not None:
@@ -301,11 +326,21 @@ class AttentionDecoder(nn.Module):
         
         current_token = torch.full((B,), bos_id, dtype=torch.long, device=device)
         
+        # Initialize coverage
+        coverage = torch.zeros(B, T, device=device) if self.use_coverage else None
+        
         for t in range(max_len):
-            logits, h, c, att_weights = self.forward_step(current_token, h, c, encoder_out)
+            logits, h, c, att_weights = self.forward_step(
+                current_token, h, c, encoder_out, coverage
+            )
             outputs.append(logits)
             attention_weights_all.append(att_weights)
             
+            # Update coverage
+            if coverage is not None:
+                coverage = coverage + att_weights
+            
+            # Scheduled sampling: gradually reduce teacher forcing
             if targets is not None and torch.rand(1).item() < teacher_forcing_ratio:
                 current_token = targets[:, t]
             else:

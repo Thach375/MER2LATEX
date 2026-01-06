@@ -108,5 +108,45 @@
     "exact_match": 0.0,
     "edit_distance": 0.8800206173546123,
     "time": "2026-01-05 14:45"
+  },
+  {
+    "model": "model_d",
+    "dataset": "im2latex",
+    "tag": "baseline",
+    "epoch": 2,
+    "bleu": 0.5072992784367688,
+    "exact_match": 0.00038628681796233703,
+    "edit_distance": 0.43379908003804524,
+    "time": "2026-01-06 09:00"
+  },
+  {
+    "model": "model_d",
+    "dataset": "crohme",
+    "tag": "baseline",
+    "epoch": 2,
+    "bleu": 0.26150922277462646,
+    "exact_match": 0.0,
+    "edit_distance": 0.9309542175781597,
+    "time": "2026-01-06 09:03"
+  },
+  {
+    "model": "model_d",
+    "dataset": "im2latex",
+    "tag": "finetuned",
+    "epoch": 2,
+    "bleu": 0.23545440591413655,
+    "exact_match": 0.0,
+    "edit_distance": 0.5366496396760924,
+    "time": "2026-01-06 09:52"
+  },
+  {
+    "model": "model_d",
+    "dataset": "crohme",
+    "tag": "finetuned",
+    "epoch": 2,
+    "bleu": 0.8565466109841441,
+    "exact_match": 0.0,
+    "edit_distance": 0.6843811773866375,
+    "time": "2026-01-06 09:54"
   }
 ]

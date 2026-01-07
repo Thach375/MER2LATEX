@@ -40,6 +40,46 @@
     "time": "2026-01-04 18:47"
   },
   {
+    "model": "model_b",
+    "dataset": "im2latex",
+    "tag": "baseline",
+    "epoch": 14,
+    "bleu": 0.6843422533610997,
+    "exact_match": 0.0,
+    "edit_distance": 0.6910465753390315,
+    "time": "2026-01-07 00:00"
+  },
+  {
+    "model": "model_b",
+    "dataset": "crohme",
+    "tag": "baseline",
+    "epoch": 14,
+    "bleu": 0.07283482864340239,
+    "exact_match": 0.0,
+    "edit_distance": 0.9618430962747978,
+    "time": "2026-01-07 00:01"
+  },
+  {
+    "model": "model_b",
+    "dataset": "im2latex",
+    "tag": "finetuned",
+    "epoch": 2,
+    "bleu": 0.7239768078888708,
+    "exact_match": 0.0,
+    "edit_distance": 0.6486721388949701,
+    "time": "2026-01-07 01:09"
+  },
+  {
+    "model": "model_b",
+    "dataset": "crohme",
+    "tag": "finetuned",
+    "epoch": 2,
+    "bleu": 0.17718204822232672,
+    "exact_match": 0.0,
+    "edit_distance": 0.9004030289602933,
+    "time": "2026-01-07 01:09"
+  },
+  {
     "model": "model_c",
     "dataset": "im2latex",
     "tag": "baseline",
@@ -78,36 +118,6 @@
     "exact_match": 0.0010604453870625664,
     "edit_distance": 0.7979195038525971,
     "time": "2026-01-05 14:56"
-  },
-  {
-    "model": "model_b",
-    "dataset": "im2latex",
-    "tag": "baseline",
-    "epoch": 21,
-    "bleu": 0.3652607026102248,
-    "exact_match": 0.0,
-    "edit_distance": 0.6717172797611736,
-    "time": "2026-01-05 16:17"
-  },
-  {
-    "model": "model_b",
-    "dataset": "crohme",
-    "tag": "baseline",
-    "epoch": 21,
-    "bleu": 0.10508033364916466,
-    "exact_match": 0.0,
-    "edit_distance": 0.9578352157748626,
-    "time": "2026-01-05 16:18"
-  },
-    {
-    "model": "model_b",
-    "dataset": "crohme",
-    "tag": "finetuned",
-    "epoch": 2,
-    "bleu": 0.3858873882764439,
-    "exact_match": 0.0,
-    "edit_distance": 0.8800206173546123,
-    "time": "2026-01-05 14:45"
   },
   {
     "model": "model_d",

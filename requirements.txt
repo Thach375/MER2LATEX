@@ -15,9 +15,9 @@ torch
 torchvision
 pytorch-lightning
 sympy
-latex2sympy2
 sacrebleu
 wandb
 kagglehub
 kaggle
 albumentations
+antlr4-python3-runtime==4.11

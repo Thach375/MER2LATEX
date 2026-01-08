@@ -1,6 +1,6 @@
 # MER2LATEX - Source Code Structure
 
-## 📁 Cấu trúc Project
+Cấu trúc Project
 
 ```
 src/
@@ -35,7 +35,7 @@ src/
 
 ```
 
-## 🚀 Quick Start
+Quick Start
 
 ### 1. Format CROHME Dataset
 ```bash
@@ -58,13 +58,13 @@ chmod +x pipeline.sh
 ./pipeline.sh
 ```
 
-## 📊 Notebooks
+Notebooks
 
 **Ngắn gọn, chỉ visualize:**
 - `2_EDA.ipynb` - Import hàm từ src, chỉ plot
 - `3_Preprocessing.ipynb` - Import hàm từ src, chỉ visualize
 
-## 💡 Nguyên tắc
+Nguyên tắc
 
 1. **Notebooks**: CHỈ import + visualize
 2. **src/*.py**: Logic + if __name__ == "__main__"

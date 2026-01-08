@@ -5,7 +5,7 @@ from sympy.printing.latex import latex as sympy_latex
 # -----------------------------
 # LaTeX gốc (GIỮ NGUYÊN)
 # -----------------------------
-tex = r"\frac{d}{dx}(x^2 + x)"
+tex = r"| {\cal F} _ {z {\bar{v}} | ^ {2} = \frac{1} {4 - f ^ {2} \; .}}"
 
 # Parse sang SymPy
 expr = parse_latex(tex)

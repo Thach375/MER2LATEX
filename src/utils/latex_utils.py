@@ -5,20 +5,19 @@ Functions for cleaning and rendering LaTeX strings.
 """
 
 import re
-from typing import Optional
+from typing import Optional, Tuple
 from PIL import Image
-import matplotlib.pyplot as plt
 from io import BytesIO
 
-# Try to import sympy for LaTeX rendering
-try:
-    from sympy import latex, sympify
-    from sympy.parsing.latex import parse_latex
-    import matplotlib
-    matplotlib.use('Agg')
-    SYMPY_AVAILABLE = True
-except ImportError:
-    SYMPY_AVAILABLE = False
+# Configure matplotlib for non-interactive backend FIRST
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# Configure mathtext for LaTeX-like rendering
+matplotlib.rcParams['mathtext.fontset'] = 'cm'  # Computer Modern (LaTeX default)
+matplotlib.rcParams['mathtext.rm'] = 'serif'
+matplotlib.rcParams['font.family'] = 'serif'
 
 
 def clean_latex_output(latex_str: str) -> str:
@@ -131,81 +130,196 @@ def clean_latex_output(latex_str: str) -> str:
     return latex_str
 
 
-def render_latex_with_sympy(latex_str: str) -> Optional[Image.Image]:
+def _prepare_latex_for_mathtext(latex_str: str) -> str:
     """
-    Render LaTeX string as image using SymPy and Matplotlib.
-    Includes automatic cleaning and fixing of LaTeX output.
+    Convert LaTeX string to be compatible with matplotlib's mathtext.
+    Mathtext has limited LaTeX support, so we need to convert/remove unsupported commands.
     
     Args:
-        latex_str: LaTeX string to render
+        latex_str: LaTeX string
+    
+    Returns:
+        Mathtext-compatible LaTeX string
+    """
+    if not latex_str:
+        return latex_str
+    
+    result = latex_str
+    
+    # Remove extra spaces around braces and operators for cleaner rendering
+    result = re.sub(r'\s*\{\s*', '{', result)
+    result = re.sub(r'\s*\}\s*', '}', result)
+    result = re.sub(r'\s+', ' ', result)
+    
+    # Replace unsupported commands with supported alternatives
+    replacements = {
+        r'\tilde': r'\widetilde',  # tilde -> widetilde
+        r'\prime': "'",            # prime -> apostrophe
+        r'\displaystyle': '',      # remove displaystyle
+        r'\textstyle': '',         # remove textstyle
+        r'\scriptstyle': '',       # remove scriptstyle
+        r'\scriptscriptstyle': '', # remove scriptscriptstyle
+        r'\left': '',              # remove \left
+        r'\right': '',             # remove \right
+        r'\bigl': '',              # remove sizing
+        r'\bigr': '',
+        r'\Bigl': '',
+        r'\Bigr': '',
+        r'\biggl': '',
+        r'\biggr': '',
+        r'\Biggl': '',
+        r'\Biggr': '',
+        r'\middle': '',
+        r'\Big': '',
+        r'\big': '',
+        r'\text': r'\mathrm',      # text -> mathrm
+        r'\textbf': r'\mathbf',    # textbf -> mathbf  
+        r'\textit': r'\mathit',    # textit -> mathit
+        r'\bm': r'\mathbf',        # bm -> mathbf
+        r'\boldsymbol': r'\mathbf',
+        r'\hspace': '',            # remove hspace
+        r'\vspace': '',            # remove vspace
+        r'\quad': ' ',             # quad -> space
+        r'\qquad': '  ',           # qquad -> double space
+        r'\;': ' ',                # thick space -> space
+        r'\:': ' ',                # medium space -> space
+        r'\,': '',                 # thin space -> nothing
+        r'\!': '',                 # negative thin space -> nothing
+    }
+    
+    for old, new in replacements.items():
+        result = result.replace(old, new)
+    
+    # Clean up multiple spaces
+    result = re.sub(r'\s+', ' ', result)
+    result = result.strip()
+    
+    return result
+
+
+def _render_single_latex(latex_str: str) -> Optional[Image.Image]:
+    """
+    Internal function to render a single LaTeX string to image.
+    
+    Args:
+        latex_str: LaTeX string to render (already cleaned or raw)
     
     Returns:
         PIL Image or None if rendering fails
     """
-    if not SYMPY_AVAILABLE:
+    if not latex_str or not latex_str.strip():
         return None
     
     try:
-        # Clean and fix LaTeX output first
-        cleaned_latex = clean_latex_output(latex_str)
+        # Prepare LaTeX for mathtext (convert unsupported commands)
+        prepared_latex = _prepare_latex_for_mathtext(latex_str)
         
-        if not cleaned_latex or cleaned_latex == '...':
-            print(f"[WARNING] LaTeX string is empty or too long after cleaning")
-            return None
-        
-        # Try to parse with SymPy (uses antlr4)
-        try:
-            expr = parse_latex(cleaned_latex)
-            latex_to_render = sympy_latex(expr)
-        except Exception as parse_error:
-            print(f"[DEBUG] SymPy parse failed, using raw LaTeX: {parse_error}")
-            # Fall back to rendering raw cleaned LaTeX
-            latex_to_render = cleaned_latex
+        print(f"[DEBUG] Prepared LaTeX for rendering: {prepared_latex[:60]}...")
         
         # Dynamic figure sizing based on LaTeX length
-        latex_length = len(latex_to_render)
-        if latex_length < 50:
-            figsize = (8, 1.5)
-            fontsize = 28
-        elif latex_length < 100:
-            figsize = (12, 2.5)
-            fontsize = 24
-        elif latex_length < 200:
-            figsize = (16, 3.5)
+        latex_length = len(prepared_latex)
+        if latex_length < 30:
+            figsize = (6, 1.2)
+            fontsize = 22
+        elif latex_length < 60:
+            figsize = (10, 1.8)
             fontsize = 20
+        elif latex_length < 120:
+            figsize = (14, 2.5)
+            fontsize = 18
         else:
-            figsize = (20, 4.5)
+            figsize = (18, 3.5)
             fontsize = 16
         
-        # Create matplotlib figure
-        fig, ax = plt.subplots(figsize=figsize)
-        ax.axis('off')
+        # Create figure with white background
+        fig = plt.figure(figsize=figsize, facecolor='white', edgecolor='none')
         
-        # Render LaTeX
-        ax.text(
-            0.5, 
-            0.5,
-            f"${latex_to_render}$",
-            ha="center",
-            va="center",
+        # Remove all axes/borders
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis('off')
+        ax.set_facecolor('white')
+        
+        # Render LaTeX using matplotlib's mathtext
+        latex_display = r"$" + prepared_latex + r"$"
+        
+        text_obj = ax.text(
+            0.5, 0.5,
+            latex_display,
+            transform=ax.transAxes,
             fontsize=fontsize,
-            wrap=True
+            ha='center',
+            va='center',
+            color='black'
         )
         
-        # Convert to image
+        # Render to buffer
         buf = BytesIO()
-        plt.tight_layout()
-        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', 
-                   facecolor='white', edgecolor='none')
-        buf.seek(0)
-        
-        image = Image.open(buf)
+        fig.savefig(
+            buf,
+            format='png',
+            dpi=200,
+            bbox_inches='tight',
+            pad_inches=0.15,
+            facecolor='white',
+            edgecolor='none'
+        )
         plt.close(fig)
         
+        buf.seek(0)
+        image = Image.open(buf).copy()  # Copy to detach from buffer
+        buf.close()
+        
         return image
-    
+        
     except Exception as e:
-        print(f"[WARNING] Failed to render LaTeX with SymPy: {e}")
-        print(f"[DEBUG] Original LaTeX: {latex_str[:100]}...")
-        print(f"[DEBUG] Cleaned LaTeX: {cleaned_latex[:100] if 'cleaned_latex' in locals() else 'N/A'}...")
+        print(f"[ERROR] Matplotlib render failed: {e}")
+        plt.close('all')
         return None
+
+
+def render_latex_with_sympy(latex_str: str) -> Tuple[Optional[Image.Image], Optional[Image.Image]]:
+    """
+    Render LaTeX string as images using Matplotlib's mathtext renderer.
+    Returns two images: one for raw LaTeX, one for cleaned LaTeX.
+    
+    Args:
+        latex_str: Raw LaTeX string from model
+    
+    Returns:
+        Tuple of (raw_image, cleaned_image):
+        - raw_image: Rendered image of original latex_str
+        - cleaned_image: Rendered image of clean_latex_output(latex_str)
+    """
+    if not latex_str:
+        print("[WARNING] Empty LaTeX string provided")
+        return None, None
+    
+    # Clean the LaTeX
+    cleaned_latex = clean_latex_output(latex_str)
+    
+    print(f"[DEBUG] Raw LaTeX: {latex_str[:80]}...")
+    print(f"[DEBUG] Cleaned LaTeX: {cleaned_latex[:80]}...")
+    
+    # Render raw LaTeX
+    raw_image = None
+    try:
+        raw_image = _render_single_latex(latex_str)
+        if raw_image:
+            print("[INFO] Successfully rendered raw LaTeX")
+        else:
+            print("[WARNING] Failed to render raw LaTeX")
+    except Exception as e:
+        print(f"[ERROR] Raw LaTeX render error: {e}")
+    
+    # Render cleaned LaTeX
+    cleaned_image = None
+    try:
+        cleaned_image = _render_single_latex(cleaned_latex)
+        if cleaned_image:
+            print("[INFO] Successfully rendered cleaned LaTeX")
+        else:
+            print("[WARNING] Failed to render cleaned LaTeX")
+    except Exception as e:
+        print(f"[ERROR] Cleaned LaTeX render error: {e}")
+    
+    return raw_image, cleaned_image

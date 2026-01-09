@@ -49,7 +49,7 @@ def process_image(
     image: np.ndarray,
     model_choice: str,
     preprocessing_type: str
-) -> Tuple[str, Optional[Image.Image], Image.Image]:
+) -> Tuple[str, Optional[Image.Image], Image.Image, Optional[Image.Image]]:
     """
     Main processing function for Gradio interface.
     
@@ -59,15 +59,15 @@ def process_image(
         preprocessing_type: Type of preprocessing
     
     Returns:
-        (latex_output, rendered_image, preprocessed_image)
+        (latex_output, rendered_cleaned_image, preprocessed_image, rendered_raw_image)
     """
     global CURRENT_MODEL, CURRENT_MODEL_PATH
     
     if image is None:
-        return "[WARNING] Please upload an image", None, None
+        return "[WARNING] Please upload an image", None, None, None
     
     if not model_choice or model_choice not in MODELS:
-        return "[WARNING] Please select a valid model", None, None
+        return "[WARNING] Please select a valid model", None, None, None
     
     try:
         # Load model if not already loaded or different model selected
@@ -90,11 +90,11 @@ def process_image(
         print(f"[INFO] Predicting LaTeX")
         latex_output = predict_latex(CURRENT_MODEL, TOKENIZER, preprocessed, DEVICE)
         
-        # Clean LaTeX for rendering
+        # Clean LaTeX for display
         cleaned_latex = clean_latex_output(latex_output)
         
-        # Render LaTeX with SymPy (using cleaned version)
-        rendered_image = render_latex_with_sympy(cleaned_latex)
+        # Render LaTeX - returns tuple (raw_image, cleaned_image)
+        rendered_raw_image, rendered_cleaned_image = render_latex_with_sympy(latex_output)
         
         # Format output with model info
         model_info = f"**Model:** {model_type}\n"
@@ -107,15 +107,14 @@ def process_image(
         else:
             latex_display = model_info + f"**LaTeX Output:**\n\n```latex\n{latex_output}\n```"
         
-        return latex_display, rendered_image, preprocessed_pil
+        return latex_display, rendered_cleaned_image, preprocessed_pil, rendered_raw_image
     
     except Exception as e:
         error_msg = f"[ERROR] {str(e)}"
         print(f"[ERROR] {error_msg}")
         import traceback
         traceback.print_exc()
-        return error_msg, None, None
-
+        return error_msg, None, None, None
 
 # ============================================================================
 # Build Gradio App
@@ -163,9 +162,9 @@ def build_app():
                 )
                 
                 preprocessing_radio = gr.Radio(
-                    choices=["IM2LATEX", "CROHME"],
+                    choices=["typeset", "handwriting"],
                     label="Preprocessing Type",
-                    value="IM2LATEX",
+                    value="typeset",
                     info="IM2LATEX for rendered images, CROHME for handwritten"
                 )
                 
@@ -187,16 +186,21 @@ def build_app():
                     type="pil"
                 )
                 
+                rendered_output_raw = gr.Image(
+                    label="Rendered LaTeX (Raw)",
+                    type="pil"
+                )
+                
                 rendered_output = gr.Image(
                     label="Rendered LaTeX (SymPy)",
                     type="pil"
-                )
+                ) 
         
         # Connect components
         submit_btn.click(
             fn=process_image,
             inputs=[image_input, model_dropdown, preprocessing_radio],
-            outputs=[latex_output, rendered_output, preprocessed_output]
+            outputs=[latex_output, rendered_output, preprocessed_output, rendered_output_raw]
         )
     
     return app

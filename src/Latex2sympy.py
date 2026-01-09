@@ -5,7 +5,8 @@ from sympy.printing.latex import latex as sympy_latex
 # -----------------------------
 # LaTeX gốc (GIỮ NGUYÊN)
 # -----------------------------
-tex = r"| {\cal F} _ {z {\bar{v}} | ^ {2} = \frac{1} {4 - f ^ {2} \; .}}"
+tex = r"g ( \tilde { f } _ { 2 } Q _ { 3 } - \tilde { f } _ { 3 } Q _ { 2 } ) - g ^ { \prime } Q _ { 1 } = 0 ."
+
 
 # Parse sang SymPy
 expr = parse_latex(tex)

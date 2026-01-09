@@ -1,0 +1,11 @@
+train 
+./pipeline.sh --skip-data --model model_b --dataset im2latex --epochs 30 --batch-size 16
+
+eval train
+python -m src.evaluation.evaluate   --checkpoint checkpoints/model_b/20260106_013123/best.pt  --model model_b   --dataset all   --batch-size 16 --tag baseline
+
+finetune
+python -m src.training.trainer   --model model_b   --dataset crohme   --epochs 5   --batch-size 16   --finetune checkpoints/model_b/20260106_013123/best.pt --lr 1e-6
+
+eval finetune
+python -m src.evaluation.evaluate   --checkpoint checkpoints/model_b/20260106_013123/best.pt --model model_b   --dataset all  --batch-size 16 --tag finetuned

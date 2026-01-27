@@ -1,6 +1,6 @@
 # MER2LaTeX - Math Expression Recognition
 
-Deep Learning Project: Image -> LaTeX -> (Optional) SymPy
+Deep Learning Project: Image -> LaTeX -> Visualize
 
 ## Project Structure
 
